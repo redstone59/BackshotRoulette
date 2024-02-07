@@ -8,10 +8,17 @@ class BackshotRoulette:
         # Evaluate how good the current players position is.
         # Should utilise turn probability, health, item count, knowing shells, etc.
 
+        if state.live_shells == 0: return 0 # If there are no more live shells, it is a forced reload.
+        
         state_eval = 0
 
-        if state.current_shell != None: state_eval += 1
+        if state.current_shell != None: state_eval += 10
         
+        chance_live_loaded = state.live_shells / (state.live_shells + state.blank_shells)
+        state_eval += chance_live_loaded * 5
+        
+        state_eval += state.player_health * 25
+        state_eval -= state.dealer_health * 25
 
         state_eval *= state.probabilty
 
@@ -26,14 +33,20 @@ class BackshotRoulette:
         if depth == 0: return self.evaluate(state)
         
         all_moves = state.get_all_moves()
+        all_moves = [move for move in all_moves if move != None]
+        
         best_move = None
         best_eval = None
 
         for move in all_moves:
-            move = self.search(depth - 1, move)
-            eval = self.evaluate(move)
+            next_state = state.move(move)
             
-            if eval > best_eval:
+            if next_state == None: continue
+            
+            move = self.search(depth - 1, next_state)
+            eval = self.evaluate(next_state)
+            
+            if best_eval == None or eval > best_eval:
                 best_move = move
                 best_eval = eval
         

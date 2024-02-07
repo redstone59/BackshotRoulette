@@ -1,4 +1,3 @@
-import random
 from enum import *
 from copy import deepcopy
 
@@ -50,8 +49,6 @@ class BuckshotRouletteMove:
         self.dealer_items = dealer_items
         self.player_items = player_items
     
-    
-    
     def get_all_moves(self):
         all_moves = [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]
         current_items = self.player_items if self.is_players_turn else self.dealer_items
@@ -80,16 +77,20 @@ class BuckshotRouletteMove:
         
         next_move = deepcopy(self)
         
-        live_probability = self.live_shells / (self.live_shells + self.blank_shells)
+        if self.live_shells + self.blank_shells == 0:
+            live_probability = 0
+        else:
+            live_probability = self.live_shells / (self.live_shells + self.blank_shells)
+            
         blank_probability = 1 - live_probability # Since live_probability + blank_probability must equal 1
         
         live_move = deepcopy(self)
         live_move.probabilty *= live_probability
-        live_move.live_shells -= 1
+        live_move.live_shells = max(0, live_move.live_shells - 1)
         
         blank_move = deepcopy(self)
         blank_move.probabilty *= blank_probability
-        blank_move.blank_shells -= 1
+        blank_move.blank_shells = max(0, blank_move.blank_shells - 1)
         
         
         match move:
@@ -101,7 +102,7 @@ class BuckshotRouletteMove:
                 blank_move.current_shell = None
                 blank_move.is_players_turn = False # If the player shoots the dealer with a blank, it is not the players turn. If the dealer shoots themself with a blank, it is not the players turn.
                 
-                return live_move, blank_move
+                return live_move#, blank_move
             
             case ValidMoves.SHOOT_PLAYER:
                 live_move.player_health -= 1
@@ -111,26 +112,26 @@ class BuckshotRouletteMove:
                 blank_move.current_shell = None
                 blank_move.is_players_turn = True # If the player shoots themself with a blank, it is the players turn. If the dealer shoots the player with a blank, it is the players turn.
 
-                return live_move, blank_move
+                return live_move#, blank_move
                 
             case ValidMoves.USE_BEER:
                 live_move.current_shell = None
                 blank_move.current_shell = None
                 
-                return live_move, blank_move
+                return live_move#, blank_move
             
             case ValidMoves.USE_MAGNIFYING_GLASS:
                 live_move.current_shell = "live"
                 blank_move.current_shell = "blank"
                 
-                return live_move, blank_move
+                return live_move#, blank_move
             
             case ValidMoves.USE_CIGARETTES:
                 if self.is_players_turn:
-                    next_move.player_health += 1
+                    next_move.player_health += 1 if next_move.player_health != next_move.max_health else 0
                     next_move.player_items.remove(Items.CIGARETTES)
                 else:
-                    next_move.dealer_health += 1
+                    next_move.dealer_health += 1 if next_move.player_health != next_move.max_health else 0
                     next_move.dealer_items.remove(Items.CIGARETTES)
                 
                 return next_move
