@@ -1,5 +1,4 @@
 from enum import *
-from copy import deepcopy
 
 class ValidMoves(Enum):
     SHOOT_DEALER = 0
@@ -49,6 +48,16 @@ class BuckshotRouletteMove:
         self.dealer_items = dealer_items
         self.player_items = player_items
     
+    def deep_copy(self):
+        return BuckshotRouletteMove(self.is_players_turn,
+                                    self.max_health,
+                                    self.dealer_health,
+                                    self.player_health,
+                                    self.live_shells,
+                                    self.blank_shells,
+                                    self.dealer_items,
+                                    self.player_items)
+    
     def get_all_moves(self):
         all_moves = [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]
         current_items = self.player_items if self.is_players_turn else self.dealer_items
@@ -75,7 +84,7 @@ class BuckshotRouletteMove:
     def move(self, move: ValidMoves):
         if move not in self.get_all_moves(): raise InvalidMoveError()
         
-        next_move = deepcopy(self)
+        next_move = self.deep_copy()
         
         if self.live_shells + self.blank_shells == 0:
             live_probability = 0
@@ -84,11 +93,11 @@ class BuckshotRouletteMove:
             
         blank_probability = 1 - live_probability # Since live_probability + blank_probability must equal 1
         
-        live_move = deepcopy(self)
+        live_move = self.deep_copy()
         live_move.probabilty *= live_probability
         live_move.live_shells = max(0, live_move.live_shells - 1)
         
-        blank_move = deepcopy(self)
+        blank_move = self.deep_copy()
         blank_move.probabilty *= blank_probability
         blank_move.blank_shells = max(0, blank_move.blank_shells - 1)
         
