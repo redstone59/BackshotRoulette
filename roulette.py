@@ -102,7 +102,7 @@ class BuckshotRouletteMove:
                 blank_move.current_shell = None
                 blank_move.is_players_turn = False # If the player shoots the dealer with a blank, it is not the players turn. If the dealer shoots themself with a blank, it is not the players turn.
                 
-                return live_move#, blank_move
+                return live_move, blank_move
             
             case ValidMoves.SHOOT_PLAYER:
                 live_move.player_health -= 1
@@ -112,19 +112,19 @@ class BuckshotRouletteMove:
                 blank_move.current_shell = None
                 blank_move.is_players_turn = True # If the player shoots themself with a blank, it is the players turn. If the dealer shoots the player with a blank, it is the players turn.
 
-                return live_move#, blank_move
+                return live_move, blank_move
                 
             case ValidMoves.USE_BEER:
                 live_move.current_shell = None
                 blank_move.current_shell = None
                 
-                return live_move#, blank_move
+                return live_move, blank_move
             
             case ValidMoves.USE_MAGNIFYING_GLASS:
                 live_move.current_shell = "live"
                 blank_move.current_shell = "blank"
                 
-                return live_move#, blank_move
+                return live_move, blank_move
             
             case ValidMoves.USE_CIGARETTES:
                 if self.is_players_turn:
@@ -134,7 +134,7 @@ class BuckshotRouletteMove:
                     next_move.dealer_health += 1 if next_move.player_health != next_move.max_health else 0
                     next_move.dealer_items.remove(Items.CIGARETTES)
                 
-                return next_move
+                return next_move,
             
             case ValidMoves.USE_HANDCUFFS:
                 if self.handcuffed: return None
@@ -146,7 +146,7 @@ class BuckshotRouletteMove:
                 
                 next_move.handcuffed = True
                 
-                return next_move
+                return next_move,
                 
             case ValidMoves.USE_HAND_SAW:
                 if self.gun_is_sawed: return None
@@ -158,7 +158,7 @@ class BuckshotRouletteMove:
                 
                 next_move.gun_is_sawed = True
                 
-                return next_move
+                return next_move,
     
     def __str__(self):
         return f"""Buckshot Roulette Move
