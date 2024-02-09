@@ -1,6 +1,6 @@
 from roulette import *
 
-INF = 0x7fffffff # It's just a large number, okay?
+INF = mpf(inf)
 
 def max_or_min(is_players_turn: bool, a, b):
     if a == None: return b
@@ -46,10 +46,9 @@ def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
     return False
 
 class Move:
-    def __init__(self, move_type, evaluation, line = []):
+    def __init__(self, move_type, evaluation):
         self.move_type = move_type
         self.evaluation = evaluation
-        self.line = line
     
     def __str__(self):
         if self.move_type == None: return f"Evaluation: {self.evaluation}"
@@ -63,7 +62,7 @@ class BackshotRoulette:
         # Evaluate how good the current players position is.
         # Should utilise turn probability, health, item count, knowing shells, etc.
         
-        state_eval = 0
+        state_eval = mpf(0)
 
         if state.live_shells == 0: return 0 # If there are no more live shells, it is a forced reload.
         
@@ -95,21 +94,31 @@ class BackshotRoulette:
 
         return state_eval
     
-    def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_move = None):
-        if depth == 0: return Move(None, self.evaluate(parent_move, state))
-        
+    def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []):
+        if depth == 0:
+            if len(parent_moves) >= 1:
+                last_move = parent_moves[-1]
+            else:
+                last_move = None
+            
+            return Move(None, self.evaluate(last_move, state))
+
         all_moves = state.get_all_moves()
-        all_moves = [move for move in all_moves if move != None]
+        all_moves = [move for move in all_moves if type(move) != int]
         
         best_move = Move(None, INF * -1 if state.is_players_turn else 1)
 
         for move in all_moves:
-            next_state = state.move(move)
+            try:
+                next_state = state.move(move)
+            except InvalidMoveError:
+                print("invalid move", move)
+                continue
             
             if is_redundant_move(move, state) or next_state == None: continue
-            
+
             for position in next_state:
-                eval = -self.search(depth - 1, position, alpha, beta, parent_move = move).evaluation
+                eval = -self.search(depth - 1, position, alpha, beta, parent_moves = parent_moves + [move]).evaluation
                 
                 if position.is_players_turn:
                     eval *= -1
@@ -119,9 +128,9 @@ class BackshotRoulette:
                 
                 if beta <= alpha: break
                 
-                move = Move(move, eval)
-                
-                if max_or_min(position.is_players_turn, move.evaluation, best_move.evaluation):
-                    best_move = move
+                if max_or_min(position.is_players_turn, eval, best_move.evaluation):
+                    best_move = Move(move, eval)
+            
+            if beta <= alpha: break
     
         return best_move
