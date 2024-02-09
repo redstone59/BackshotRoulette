@@ -96,6 +96,8 @@ def low_health_penalty(state: BuckshotRouletteMove):
     if (not state.is_players_turn) and state.dealer_health == 1:
         return -75
 
+    return 0
+
 def max_or_min(is_players_turn: bool, a, b):
     if a == None: return b
     if b == None: return a
