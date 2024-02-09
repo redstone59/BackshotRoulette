@@ -80,7 +80,6 @@ class BuckshotRouletteMove:
         return all_moves
     
     def move(self, move: ValidMoves):
-        print(move, self.dealer_items)
         if move not in self.get_all_moves(): 
             error_message = f"Move {move} not possible in position\n---\n{self}\n---"
             raise InvalidMoveError(error_message)
