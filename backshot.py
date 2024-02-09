@@ -95,13 +95,13 @@ class BackshotRoulette:
         return state_eval
     
     def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []):
-        if depth == 0:
+        if 0 in [depth, state.live_shells, state.dealer_health, state.player_health]:
             if len(parent_moves) >= 1:
                 last_move = parent_moves[-1]
             else:
                 last_move = None
             
-            return Move(None, self.evaluate(last_move, state))
+            return Move(None, self.evaluate(last_move, state) * 1 if state.is_players_turn else -1)
 
         all_moves = state.get_all_moves()
         all_moves = [move for move in all_moves if type(move) != int]
