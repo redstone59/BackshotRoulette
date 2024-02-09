@@ -90,6 +90,12 @@ def known_shell_bonus(move: ValidMoves, state: BuckshotRouletteMove):
     
     return bonus
 
+def low_health_penalty(state: BuckshotRouletteMove):
+    if state.is_players_turn and state.player_health == 1:
+        return -75
+    if (not state.is_players_turn) and state.dealer_health == 1:
+        return -75
+
 def max_or_min(is_players_turn: bool, a, b):
     if a == None: return b
     if b == None: return a
@@ -125,6 +131,8 @@ class BackshotRoulette:
         
         state_eval += item_bonus(state.player_items)
         state_eval -= item_bonus(state.dealer_items)
+        
+        state_eval += low_health_penalty(state)
         
         state_eval += state.player_health * 25
         state_eval -= state.dealer_health * 25
