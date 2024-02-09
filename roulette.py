@@ -51,7 +51,7 @@ class BuckshotRouletteMove:
         self.player_items = player_items
     
     def get_all_moves(self):
-        all_moves = []
+        all_moves = [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]
         
         if self.is_players_turn:
             current_items = self.player_items
@@ -74,8 +74,6 @@ class BuckshotRouletteMove:
                 
                 case Items.MAGNIFYING_GLASS:
                     all_moves += [ValidMoves.USE_MAGNIFYING_GLASS]
-        
-        all_moves += [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]
         
         return all_moves
     
