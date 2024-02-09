@@ -1,4 +1,5 @@
 from enum import *
+from mpmath import *
 
 class ValidMoves(Enum):
     SHOOT_DEALER = 0
@@ -31,7 +32,7 @@ class BuckshotRouletteMove:
                  player_items = []
                  ):
         
-        self.probabilty = 1.00
+        self.probabilty = mpf(1.00)
         
         self.live_shells = live_shells
         self.blank_shells = blank_shells
@@ -82,7 +83,9 @@ class BuckshotRouletteMove:
         return all_moves
     
     def move(self, move: ValidMoves):
-        if move not in self.get_all_moves(): raise InvalidMoveError()
+        if move not in self.get_all_moves(): 
+            error_message = f"Move {move} not possible in position\n{self}"
+            raise InvalidMoveError(error_message)
         
         next_move = self.deep_copy()
         
@@ -100,7 +103,6 @@ class BuckshotRouletteMove:
         blank_move = self.deep_copy()
         blank_move.probabilty *= blank_probability
         blank_move.blank_shells = max(0, blank_move.blank_shells - 1)
-        
         
         match move:
             case ValidMoves.SHOOT_DEALER:
