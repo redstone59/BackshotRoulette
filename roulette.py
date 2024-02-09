@@ -1,5 +1,6 @@
 from enum import *
 from mpmath import *
+from copy import deepcopy
 
 class ValidMoves(Enum):
     SHOOT_DEALER = 0
@@ -49,19 +50,13 @@ class BuckshotRouletteMove:
         self.dealer_items = dealer_items
         self.player_items = player_items
     
-    def deep_copy(self):
-        return BuckshotRouletteMove(self.is_players_turn,
-                                    self.max_health,
-                                    self.dealer_health,
-                                    self.player_health,
-                                    self.live_shells,
-                                    self.blank_shells,
-                                    self.dealer_items,
-                                    self.player_items)
-    
     def get_all_moves(self):
-        all_moves = [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]
-        current_items = self.player_items if self.is_players_turn else self.dealer_items
+        all_moves = []
+        
+        if self.is_players_turn:
+            current_items = self.player_items
+        else:
+            current_items = self.dealer_items
         
         for item in current_items:
             match item:
@@ -80,14 +75,17 @@ class BuckshotRouletteMove:
                 case Items.MAGNIFYING_GLASS:
                     all_moves += [ValidMoves.USE_MAGNIFYING_GLASS]
         
+        all_moves += [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]
+        
         return all_moves
     
     def move(self, move: ValidMoves):
+        print(move, self.dealer_items)
         if move not in self.get_all_moves(): 
-            error_message = f"Move {move} not possible in position\n{self}"
+            error_message = f"Move {move} not possible in position\n---\n{self}\n---"
             raise InvalidMoveError(error_message)
         
-        next_move = self.deep_copy()
+        next_move = deepcopy(self)
         
         if self.live_shells + self.blank_shells == 0:
             live_probability = 0
@@ -96,11 +94,11 @@ class BuckshotRouletteMove:
             
         blank_probability = 1 - live_probability # Since live_probability + blank_probability must equal 1
         
-        live_move = self.deep_copy()
+        live_move = deepcopy(self)
         live_move.probabilty *= live_probability
         live_move.live_shells = max(0, live_move.live_shells - 1)
         
-        blank_move = self.deep_copy()
+        blank_move = deepcopy(self)
         blank_move.probabilty *= blank_probability
         blank_move.blank_shells = max(0, blank_move.blank_shells - 1)
         
@@ -108,7 +106,11 @@ class BuckshotRouletteMove:
             case ValidMoves.SHOOT_DEALER:
                 live_move.dealer_health -= 1
                 live_move.current_shell = None
-                live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots dealer with a live, it is not the players turn. If the dealer shoots themself with a live, it is the players turn.
+                if not self.handcuffed:
+                    live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots dealer with a live, it is not the players turn. If the dealer shoots themself with a live, it is the players turn.
+                else:
+                    live_move.handcuffed = False
+                    blank_move.handcuffed = False
 
                 blank_move.current_shell = None
                 blank_move.is_players_turn = False # If the player shoots the dealer with a blank, it is not the players turn. If the dealer shoots themself with a blank, it is not the players turn.
@@ -118,7 +120,11 @@ class BuckshotRouletteMove:
             case ValidMoves.SHOOT_PLAYER:
                 live_move.player_health -= 1
                 live_move.current_shell = None
-                live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots themself with a live, it is not the players turn. If the dealer shoots the player with a live, it is the players turn.
+                if not self.handcuffed:
+                    live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots themself with a live, it is not the players turn. If the dealer shoots the player with a live, it is the players turn.
+                else:
+                    live_move.handcuffed = False
+                    blank_move.handcuffed = False
                 
                 blank_move.current_shell = None
                 blank_move.is_players_turn = True # If the player shoots themself with a blank, it is the players turn. If the dealer shoots the player with a blank, it is the players turn.
@@ -129,11 +135,25 @@ class BuckshotRouletteMove:
                 live_move.current_shell = None
                 blank_move.current_shell = None
                 
+                if self.is_players_turn:
+                    live_move.player_items.remove(Items.BEER)
+                    blank_move.player_items.remove(Items.BEER)
+                else:
+                    live_move.dealer_items.remove(Items.BEER)
+                    blank_move.dealer_items.remove(Items.BEER)
+                
                 return live_move, blank_move
             
             case ValidMoves.USE_MAGNIFYING_GLASS:
                 live_move.current_shell = "live"
                 blank_move.current_shell = "blank"
+                
+                if self.is_players_turn:
+                    live_move.player_items.remove(Items.MAGNIFYING_GLASS)
+                    blank_move.player_items.remove(Items.MAGNIFYING_GLASS)
+                else:
+                    live_move.dealer_items.remove(Items.MAGNIFYING_GLASS)
+                    blank_move.dealer_items.remove(Items.MAGNIFYING_GLASS)
                 
                 return live_move, blank_move
             
