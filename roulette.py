@@ -58,22 +58,8 @@ class BuckshotRouletteMove:
         else:
             current_items = self.dealer_items
         
-        for item in current_items:
-            match item:
-                case Items.HANDCUFFS:
-                    all_moves += [ValidMoves.USE_HANDCUFFS]
-                
-                case Items.HAND_SAW:
-                    all_moves += [ValidMoves.USE_HAND_SAW]
-                
-                case Items.CIGARETTES:
-                    all_moves += [ValidMoves.USE_CIGARETTES]
-                
-                case Items.BEER:
-                    all_moves += [ValidMoves.USE_BEER]
-                
-                case Items.MAGNIFYING_GLASS:
-                    all_moves += [ValidMoves.USE_MAGNIFYING_GLASS]
+        for item in Items:
+            if Items.HANDCUFFS in current_items: all_moves += [ValidMoves.USE_HANDCUFFS]
         
         return all_moves
     
@@ -101,8 +87,10 @@ class BuckshotRouletteMove:
         
         match move:
             case ValidMoves.SHOOT_DEALER:
-                live_move.dealer_health -= 1
+                live_move.dealer_health -= 1 if not self.gun_is_sawed else 2
                 live_move.current_shell = None
+                live_move.gun_is_sawed = False
+                
                 if not self.handcuffed:
                     live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots dealer with a live, it is not the players turn. If the dealer shoots themself with a live, it is the players turn.
                 else:
@@ -111,12 +99,15 @@ class BuckshotRouletteMove:
 
                 blank_move.current_shell = None
                 blank_move.is_players_turn = False # If the player shoots the dealer with a blank, it is not the players turn. If the dealer shoots themself with a blank, it is not the players turn.
+                blank_move.gun_is_sawed = False
                 
                 return live_move, blank_move
             
             case ValidMoves.SHOOT_PLAYER:
-                live_move.player_health -= 1
+                live_move.player_health -= 1 if not self.gun_is_sawed else 2
                 live_move.current_shell = None
+                live_move.gun_is_sawed = False
+                
                 if not self.handcuffed:
                     live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots themself with a live, it is not the players turn. If the dealer shoots the player with a live, it is the players turn.
                 else:
@@ -125,6 +116,7 @@ class BuckshotRouletteMove:
                 
                 blank_move.current_shell = None
                 blank_move.is_players_turn = True # If the player shoots themself with a blank, it is the players turn. If the dealer shoots the player with a blank, it is the players turn.
+                blank_move.gun_is_sawed = False
 
                 return live_move, blank_move
                 
