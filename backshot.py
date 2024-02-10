@@ -67,6 +67,31 @@ def item_bonus(items: list):
     
     return bonus
 
+def item_usage_bonus(move: ValidMoves, state: BuckshotRouletteMove):
+    match move:
+        case ValidMoves.USE_BEER:
+            chance_live_loaded = state.live_shells / (state.live_shells + state.blank_shells)
+            if state.current_shell == None and chance_live_loaded < 0.5: return 250
+            return 0
+        
+        case ValidMoves.USE_CIGARETTES:
+            health_difference = state.max_health
+            health_difference -= state.player_health if state.is_players_turn else state.dealer_health
+            return 75 * health_difference
+        
+        case ValidMoves.USE_HAND_SAW:
+            if state.current_shell == "live": return 250
+            chance_live_loaded = state.live_shells / (state.live_shells + state.blank_shells)
+            if chance_live_loaded > 0.5: return 100
+        
+        case ValidMoves.USE_HANDCUFFS:
+            if state.live_shells + state.blank_shells == 2: return 250
+        
+        case ValidMoves.USE_MAGNIFYING_GLASS:
+            return 100
+    
+    return 0
+
 def known_shell_bonus(move: ValidMoves, state: BuckshotRouletteMove):
     bonus = 0
     
@@ -145,6 +170,7 @@ class BackshotRoulette:
         
         state_eval += item_bonus(state.player_items)
         state_eval -= item_bonus(state.dealer_items)
+        state_eval += item_usage_bonus(move, state)
         
         state_eval -= low_health_penalty(state)
         state_eval += shoot_other_person_bonus(move, state)
@@ -192,6 +218,7 @@ class BackshotRoulette:
                 if beta <= alpha: break
                 
             if max_or_min(position.is_players_turn, eval, best_move.evaluation):
+                print(depth, move, eval)
                 best_move = Move(move, eval)
     
         return best_move
