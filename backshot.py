@@ -1,6 +1,6 @@
 from roulette import *
 
-INF = mpf(inf)
+INF = 1000
 
 def hand_saw_bonus(state: BuckshotRouletteMove):
     if state.is_players_turn and Items.HAND_SAW in state.dealer_items and state.player_health > 2:
@@ -92,9 +92,9 @@ def known_shell_bonus(move: ValidMoves, state: BuckshotRouletteMove):
 
 def low_health_penalty(state: BuckshotRouletteMove):
     if state.is_players_turn and state.player_health == 1:
-        return -75
+        return 100
     if (not state.is_players_turn) and state.dealer_health == 1:
-        return -75
+        return 100
 
     return 0
 
@@ -103,6 +103,18 @@ def max_or_min(is_players_turn: bool, a, b):
     if b == None: return a
     if is_players_turn: return max(a, b)
     return min(a, b)
+
+def shoot_other_person_bonus(move: ValidMoves, state: BuckshotRouletteMove):
+    chance_live_loaded = state.live_shells / (state.live_shells + state.blank_shells)
+    
+    if state.current_shell != None or chance_live_loaded < 0.5: return 0
+    
+    if state.is_players_turn and move == ValidMoves.SHOOT_DEALER:
+        return 100 * (state.live_shells - state.blank_shells)
+    elif (not state.is_players_turn) and move == ValidMoves.SHOOT_PLAYER:
+        return 100 * (state.live_shells - state.blank_shells)
+    
+    return 0
 
 class Move:
     def __init__(self, move_type, evaluation):
@@ -134,7 +146,8 @@ class BackshotRoulette:
         state_eval += item_bonus(state.player_items)
         state_eval -= item_bonus(state.dealer_items)
         
-        state_eval += low_health_penalty(state)
+        state_eval -= low_health_penalty(state)
+        state_eval += shoot_other_person_bonus(move, state)
         
         state_eval += state.player_health * 25
         state_eval -= state.dealer_health * 25
@@ -144,6 +157,8 @@ class BackshotRoulette:
         return state_eval
     
     def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []):
+        print(parent_moves)
+        
         if 0 in [depth, state.live_shells, state.dealer_health, state.player_health]:
             if len(parent_moves) >= 1:
                 last_move = parent_moves[-1]
@@ -163,6 +178,8 @@ class BackshotRoulette:
             if is_redundant_move(move, state) or next_state == None: continue
 
             for position in next_state:
+                if position == None: continue
+                
                 eval = -self.search(depth - 1, position, alpha, beta, parent_moves = parent_moves + [move]).evaluation
                 
                 if position.is_players_turn:
