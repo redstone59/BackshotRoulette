@@ -1,6 +1,6 @@
 from roulette import *
 
-INF = 1000
+INF = 1000000
 
 def hand_saw_bonus(state: BuckshotRouletteMove):
     if state.is_players_turn and Items.HAND_SAW in state.dealer_items and state.player_health > 2:
@@ -157,15 +157,16 @@ class BackshotRoulette:
         return state_eval
     
     def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []):
-        print(parent_moves)
-        
         if 0 in [depth, state.live_shells, state.dealer_health, state.player_health]:
             if len(parent_moves) >= 1:
                 last_move = parent_moves[-1]
             else:
                 last_move = None
             
-            return Move(None, self.evaluate(last_move, state) * 1 if state.is_players_turn else -1)
+            position_eval = self.evaluate(last_move, state)
+            position_eval *= 1 if state.is_players_turn else -1
+            
+            return Move(None, position_eval)
 
         all_moves = state.get_all_moves()
         all_moves = [move for move in all_moves if type(move) != int]
@@ -173,11 +174,11 @@ class BackshotRoulette:
         best_move = Move(None, INF * -1 if state.is_players_turn else 1)
 
         for move in all_moves:
-            next_state = state.move(move)
+            positions = state.move(move)
             
-            if is_redundant_move(move, state) or next_state == None: continue
+            if is_redundant_move(move, state) or positions == None: continue
 
-            for position in next_state:
+            for position in positions:
                 if position == None: continue
                 
                 eval = -self.search(depth - 1, position, alpha, beta, parent_moves = parent_moves + [move]).evaluation
@@ -190,9 +191,7 @@ class BackshotRoulette:
                 
                 if beta <= alpha: break
                 
-                if max_or_min(position.is_players_turn, eval, best_move.evaluation):
-                    best_move = Move(move, eval)
-            
-            if beta <= alpha: break
+            if max_or_min(position.is_players_turn, eval, best_move.evaluation):
+                best_move = Move(move, eval)
     
         return best_move
