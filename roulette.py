@@ -1,5 +1,5 @@
 from enum import *
-from mpmath import *
+from fractions import Fraction
 from copy import deepcopy
 
 class ValidMoves(Enum):
@@ -33,7 +33,7 @@ class BuckshotRouletteMove:
                  player_items = []
                  ):
         
-        self.probabilty = mpf(1.00)
+        self.probabilty = Fraction(1, 1)
         
         self.live_shells = live_shells
         self.blank_shells = blank_shells
@@ -74,9 +74,9 @@ class BuckshotRouletteMove:
         next_move = deepcopy(self)
         
         if self.live_shells + self.blank_shells == 0:
-            live_probability = 0
+            live_probability = Fraction(0, 1)
         else:
-            live_probability = self.live_shells / (self.live_shells + self.blank_shells)
+            live_probability = Fraction(self.live_shells, self.live_shells + self.blank_shells)
             
         blank_probability = 1 - live_probability # Since live_probability + blank_probability must equal 1
         
