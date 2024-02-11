@@ -3,12 +3,17 @@ import time
 
 bot = BackshotRoulette()
 
-position = BuckshotRouletteMove(True, 4, 4, 4, 2, 3, 
-                                [Items.HANDCUFFS, Items.HANDCUFFS, Items.HANDCUFFS, Items.CIGARETTES, Items.HANDCUFFS, Items.HANDCUFFS, Items.HANDCUFFS, Items.HANDCUFFS],
-                                [Items.BEER, Items.HAND_SAW, Items.HAND_SAW, Items.CIGARETTES, Items.HAND_SAW, Items.CIGARETTES])
+position = BuckshotRouletteMove(True,   # player's turn?
+                                3, 3, 3, # health
+                                4, 4,    # live / blank
+                                [],
+                                [Items.MAGNIFYING_GLASS, Items.MAGNIFYING_GLASS, Items.HANDCUFFS, Items.BEER, Items.MAGNIFYING_GLASS, Items.CIGARETTES])
 
-for depth in range (10):
-    start_time = time.time()
-    print("Starting search with depth", depth)
-    print(bot.search(depth, position))
-    print(f"Found in {time.time() - start_time} seconds.")
+position.current_shell = None
+
+depth = 7
+
+start_time = time.time()
+print("Starting search with depth", depth)
+print(bot.search(depth, position))
+print(f"Searched {bot.positions_searched} positions in {time.time() - start_time} seconds.\a")
