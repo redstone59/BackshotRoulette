@@ -2,6 +2,26 @@ from roulette import *
 
 INF = 1000000
 
+def convert_move_list(move_list: list[ValidMoves]):
+    resultant = []
+    for move in move_list:
+        match move:
+            case ValidMoves.USE_BEER:
+                resultant += ["beer"]
+            case ValidMoves.USE_CIGARETTES:
+                resultant += ["cigarettes"]
+            case ValidMoves.USE_HAND_SAW:
+                resultant += ["saw"]
+            case ValidMoves.USE_HANDCUFFS:
+                resultant += ["handcuff"]
+            case ValidMoves.USE_MAGNIFYING_GLASS:
+                resultant += ["glass"]
+            case ValidMoves.SHOOT_DEALER:
+                resultant += ["dealer"]
+            case ValidMoves.SHOOT_PLAYER:
+                resultant += ["player"]
+    return resultant
+
 def hand_saw_bonus(state: BuckshotRouletteMove):
     if state.is_players_turn and Items.HAND_SAW in state.dealer_items and state.player_health > 2:
         return 150
@@ -70,18 +90,18 @@ def item_bonus(items: list):
 def item_usage_bonus(move: ValidMoves, state: BuckshotRouletteMove):
     match move:
         case ValidMoves.USE_BEER:
-            chance_live_loaded = state.live_shells / (state.live_shells + state.blank_shells)
+            chance_live_loaded = Fraction(state.live_shells, state.live_shells + state.blank_shells)
             if state.current_shell == None and chance_live_loaded < 0.5: return 250
             return 0
         
         case ValidMoves.USE_CIGARETTES:
             health_difference = state.max_health
             health_difference -= state.player_health if state.is_players_turn else state.dealer_health
-            return 75 * health_difference
+            return 150 * health_difference
         
         case ValidMoves.USE_HAND_SAW:
             if state.current_shell == "live": return 250
-            chance_live_loaded = state.live_shells / (state.live_shells + state.blank_shells)
+            chance_live_loaded = Fraction(state.live_shells, state.live_shells + state.blank_shells)
             if chance_live_loaded > 0.5: return 100
         
         case ValidMoves.USE_HANDCUFFS:
@@ -106,7 +126,7 @@ def known_shell_bonus(move: ValidMoves, state: BuckshotRouletteMove):
         elif (not state.is_players_turn) and move != ValidMoves.SHOOT_DEALER: return INF
     
     elif state.current_shell == None:
-        chance_live_loaded = state.live_shells / (state.live_shells + state.blank_shells)
+        chance_live_loaded = Fraction(state.live_shells, state.live_shells + state.blank_shells)
         
         if state.is_players_turn and move != ValidMoves.SHOOT_DEALER: chance_live_loaded *= -1
         elif (not state.is_players_turn) and move != ValidMoves.SHOOT_PLAYER: chance_live_loaded *= -1
@@ -130,7 +150,7 @@ def max_or_min(is_players_turn: bool, a, b):
     return min(a, b)
 
 def shoot_other_person_bonus(move: ValidMoves, state: BuckshotRouletteMove):
-    chance_live_loaded = state.live_shells / (state.live_shells + state.blank_shells)
+    chance_live_loaded = Fraction(state.live_shells, state.live_shells + state.blank_shells)
     
     if state.current_shell != None or chance_live_loaded < 0.5: return 0
     
@@ -152,17 +172,18 @@ class Move:
 
 class BackshotRoulette:
     def __init__(self):
-        pass
+        self.positions_searched = 0
     
     def evaluate(self, move: ValidMoves, state: BuckshotRouletteMove):
         # Evaluate how good the current players position is.
         # Should utilise turn probability, health, item count, knowing shells, etc.
         
-        state_eval = mpf(0)
+        state_eval = 0
 
-        if state.live_shells == 0: return 0 # If there are no more live shells, it is a forced reload.
+        if state.live_shells == 0: return INF * (-1 if state.is_players_turn else 1 ) # Avoid reloads at all costs.
+            #return 0 # If there are no more live shells, it is a forced reload.
         
-        if state.player_health == 0: state_eval =  -INF
+        if state.player_health == 0: state_eval = -INF
         if state.dealer_health == 0: state_eval = INF
         
         state_eval += known_shell_bonus(move, state)
@@ -183,6 +204,7 @@ class BackshotRoulette:
         return state_eval
     
     def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []):
+        print("Starting search with depth", depth, "on line", ", ".join(convert_move_list(parent_moves)))
         if 0 in [depth, state.live_shells, state.dealer_health, state.player_health]:
             if len(parent_moves) >= 1:
                 last_move = parent_moves[-1]
@@ -197,28 +219,30 @@ class BackshotRoulette:
         all_moves = state.get_all_moves()
         all_moves = [move for move in all_moves if type(move) != int]
         
-        best_move = Move(None, INF * -1 if state.is_players_turn else 1)
+        best_move = Move(None, INF * (-1 if state.is_players_turn else 1))
 
         for move in all_moves:
             positions = state.move(move)
             
-            if is_redundant_move(move, state) or positions == None: continue
+            if is_redundant_move(move, state) or positions == None: 
+                continue
 
             for position in positions:
-                if position == None: continue
+                if position == None or position.probabilty == 0: continue # Ignore improbable or invalid positions.
                 
-                eval = -self.search(depth - 1, position, alpha, beta, parent_moves = parent_moves + [move]).evaluation
+                self.positions_searched += 1
+                
+                eval = self.search(depth - 1, position, alpha, beta, parent_moves = parent_moves + [move]).evaluation
                 
                 if position.is_players_turn:
-                    eval *= -1
                     alpha = max(alpha, eval)
                 else:
+                    eval *= -1
                     beta = min(beta, eval)
                 
                 if beta <= alpha: break
                 
             if max_or_min(position.is_players_turn, eval, best_move.evaluation):
-                print(depth, move, eval)
                 best_move = Move(move, eval)
     
         return best_move
