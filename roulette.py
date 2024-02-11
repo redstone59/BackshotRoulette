@@ -57,12 +57,13 @@ class BuckshotRouletteMove:
             current_items = self.player_items
         else:
             current_items = self.dealer_items
+            all_moves.reverse()
         
-        if Items.HANDCUFFS in current_items: all_moves += [ValidMoves.USE_HANDCUFFS]
+        if Items.MAGNIFYING_GLASS in current_items: all_moves += [ValidMoves.USE_MAGNIFYING_GLASS]
         if Items.HAND_SAW in current_items: all_moves += [ValidMoves.USE_HAND_SAW]
+        if Items.HANDCUFFS in current_items: all_moves += [ValidMoves.USE_HANDCUFFS]
         if Items.CIGARETTES in current_items: all_moves += [ValidMoves.USE_CIGARETTES]
         if Items.BEER in current_items: all_moves += [ValidMoves.USE_BEER]
-        if Items.MAGNIFYING_GLASS in current_items: all_moves += [ValidMoves.USE_MAGNIFYING_GLASS]
         
         return all_moves
     
