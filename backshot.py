@@ -1,4 +1,5 @@
 from roulette import *
+from transposition_tables import *
 
 INF = 1000000
 
@@ -108,7 +109,7 @@ def item_usage_bonus(move: ValidMoves, state: BuckshotRouletteMove):
             if state.live_shells + state.blank_shells == 2: return 250
         
         case ValidMoves.USE_MAGNIFYING_GLASS:
-            return 100
+            return 250
     
     return 0
 
@@ -174,6 +175,7 @@ class BackshotRoulette:
     def __init__(self):
         self.positions_searched = 0
         self.verbose = False
+        self.transposition_table = TranspositionTable(64)
     
     def evaluate(self, move: ValidMoves, state: BuckshotRouletteMove):
         # Evaluate how good the current players position is.
@@ -202,6 +204,8 @@ class BackshotRoulette:
 
         state_eval += health_difference * 100
 
+        self.transposition_table.add(state, move, state_eval)
+
         state_eval *= state.probabilty
 
         return state_eval
@@ -215,7 +219,7 @@ class BackshotRoulette:
                 last_move = None
 
             position_eval = self.evaluate(last_move, state)
-            
+
             return Move(None, position_eval)
         
         all_moves = state.get_all_moves()
@@ -229,7 +233,12 @@ class BackshotRoulette:
                 if possible_positions == None: continue
                 
                 for position in possible_positions:
-                    eval = self.search(depth - 1, position, alpha, beta, parent_moves + [move]).evaluation
+                    if self.transposition_table[state, move] != None:
+                        eval = self.transposition_table[state, move]
+                        eval *= position.probabilty
+                    else:
+                        eval = self.search(depth - 1, position, alpha, beta, parent_moves + [move]).evaluation
+                    
                     if eval > max_eval:
                         max_eval = eval
                         best_move = move
@@ -251,11 +260,17 @@ class BackshotRoulette:
                 if possible_positions == None: continue
                 
                 for position in possible_positions:
-                    eval = self.search(depth - 1, position, alpha, beta, parent_moves + [move]).evaluation
+                    if self.transposition_table[state, move] != None:
+                        eval = self.transposition_table[state, move]
+                        eval *= position.probabilty
+                    else:
+                        eval = self.search(depth - 1, position, alpha, beta, parent_moves + [move]).evaluation
+                    
                     if eval < min_eval:
                         min_eval = eval
                         best_move = move
                     beta = min(beta, eval)
+                    
                     if beta <= alpha:
                         break
             
