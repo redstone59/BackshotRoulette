@@ -173,6 +173,7 @@ class Move:
 class BackshotRoulette:
     def __init__(self):
         self.positions_searched = 0
+        self.verbose = False
     
     def evaluate(self, move: ValidMoves, state: BuckshotRouletteMove):
         # Evaluate how good the current players position is.
@@ -183,7 +184,7 @@ class BackshotRoulette:
         if state.player_health == 0: state_eval = -INF
         elif state.dealer_health == 0: state_eval = INF
         
-        if state.live_shells != 0: #return INF * (-1 if state.is_players_turn else 1) # Avoid reloads at all costs.
+        if state.live_shells + state.blank_shells != 0:
             state_eval += known_shell_bonus(move, state)
             state_eval += item_usage_bonus(move, state)
             state_eval += shoot_other_person_bonus(move, state)
@@ -194,15 +195,19 @@ class BackshotRoulette:
         state_eval += hand_saw_bonus(state)
         state_eval -= low_health_penalty(state)
         
-        state_eval += state.player_health * 50
-        state_eval -= state.dealer_health * 50
+        #state_eval += state.player_health * 100
+        #state_eval -= state.dealer_health * 100
+
+        health_difference = Fraction(state.player_health, state.player_health + state.dealer_health)
+
+        state_eval += health_difference * 100
 
         state_eval *= state.probabilty
 
         return state_eval
     
     def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []):
-        print(f"Starting search with depth {depth} on moves {", ".join(convert_move_list(parent_moves))}")
+        if self.verbose: print(f"Starting search with depth {depth} on moves {', '.join(convert_move_list(parent_moves))}")
         if 0 in [depth, state.player_health, state.dealer_health, state.live_shells]:
             if len(parent_moves) >= 1:
                 last_move = parent_moves[-1]
@@ -235,6 +240,7 @@ class BackshotRoulette:
                 if beta <= alpha:
                     break
             
+            self.positions_searched += 1
             return Move(best_move, max_eval)
 
         else:
@@ -256,4 +262,5 @@ class BackshotRoulette:
                 if beta <= alpha:
                     break
             
+            self.positions_searched += 1
             return Move(best_move, min_eval)
