@@ -51,19 +51,19 @@ class BuckshotRouletteMove:
         self.player_items = player_items
     
     def get_all_moves(self):
-        all_moves = [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]
-        
-        if self.is_players_turn:
-            current_items = self.player_items
-        else:
-            current_items = self.dealer_items
-            all_moves.reverse()
+        all_moves = []
+        current_items = self.player_items if self.is_players_turn else self.dealer_items
         
         if Items.MAGNIFYING_GLASS in current_items: all_moves += [ValidMoves.USE_MAGNIFYING_GLASS]
         if Items.HAND_SAW in current_items: all_moves += [ValidMoves.USE_HAND_SAW]
         if Items.HANDCUFFS in current_items: all_moves += [ValidMoves.USE_HANDCUFFS]
         if Items.CIGARETTES in current_items: all_moves += [ValidMoves.USE_CIGARETTES]
         if Items.BEER in current_items: all_moves += [ValidMoves.USE_BEER]
+        
+        if self.is_players_turn:
+            all_moves += [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]
+        else:
+            all_moves += [ValidMoves.SHOOT_PLAYER, ValidMoves.SHOOT_DEALER]
         
         return all_moves
     
@@ -92,6 +92,7 @@ class BuckshotRouletteMove:
         match move:
             case ValidMoves.SHOOT_DEALER:
                 live_move.dealer_health -= 1 if not self.gun_is_sawed else 2
+                live_move.dealer_health = max(0, live_move.dealer_health)
                 live_move.current_shell = None
                 live_move.gun_is_sawed = False
                 
@@ -109,6 +110,7 @@ class BuckshotRouletteMove:
             
             case ValidMoves.SHOOT_PLAYER:
                 live_move.player_health -= 1 if not self.gun_is_sawed else 2
+                live_move.player_health = max(0, live_move.player_health)
                 live_move.current_shell = None
                 live_move.gun_is_sawed = False
                 

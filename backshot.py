@@ -43,12 +43,21 @@ def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
     Returns:
         bool: True if move is redundant, False if not.
     """
+    
     match move:
         case ValidMoves.SHOOT_DEALER:
+            if (not state.is_players_turn) and (state.gun_is_sawed or state.live_shells >= state.blank_shells): return True
             if state.is_players_turn and state.current_shell == "blank": return True
+            if (not state.is_players_turn) and state.current_shell == "live": return True
         
         case ValidMoves.SHOOT_PLAYER:
+            if state.is_players_turn and (state.gun_is_sawed or state.live_shells >= state.blank_shells): return True
             if (not state.is_players_turn) and state.current_shell == "blank": return True
+            if state.is_players_turn and state.current_shell == "live": return True
+
+        case ValidMoves.USE_BEER:
+            if state.current_shell != None: return True
+            if 0 in [state.live_shells, state.blank_shells]: return True
         
         case ValidMoves.USE_CIGARETTES:
             if state.is_players_turn and state.player_health == state.max_health:
@@ -91,8 +100,7 @@ def item_bonus(items: list):
 def item_usage_bonus(move: ValidMoves, state: BuckshotRouletteMove):
     match move:
         case ValidMoves.USE_BEER:
-            chance_live_loaded = Fraction(state.live_shells, state.live_shells + state.blank_shells)
-            if state.current_shell == None and chance_live_loaded < 0.5: return 250
+            if state.current_shell == None and state.live_shells < state.blank_shells: return 250
             return 0
         
         case ValidMoves.USE_CIGARETTES:
@@ -102,14 +110,14 @@ def item_usage_bonus(move: ValidMoves, state: BuckshotRouletteMove):
         
         case ValidMoves.USE_HAND_SAW:
             if state.current_shell == "live": return 250
-            chance_live_loaded = Fraction(state.live_shells, state.live_shells + state.blank_shells)
-            if chance_live_loaded > 0.5: return 100
+            if state.live_shells >= state.blank_shells: return 100
         
         case ValidMoves.USE_HANDCUFFS:
             if state.live_shells + state.blank_shells == 2: return 250
+            return 100
         
         case ValidMoves.USE_MAGNIFYING_GLASS:
-            return 250
+            return 2500
     
     return 0
 
@@ -129,10 +137,10 @@ def known_shell_bonus(move: ValidMoves, state: BuckshotRouletteMove):
     elif state.current_shell == None:
         chance_live_loaded = Fraction(state.live_shells, state.live_shells + state.blank_shells)
         
-        if state.is_players_turn and move != ValidMoves.SHOOT_DEALER: chance_live_loaded *= -1
-        elif (not state.is_players_turn) and move != ValidMoves.SHOOT_PLAYER: chance_live_loaded *= -1
+        if state.is_players_turn and move == ValidMoves.SHOOT_DEALER: chance_live_loaded *= 100
+        elif (not state.is_players_turn) and move == ValidMoves.SHOOT_PLAYER: chance_live_loaded *= 100
         
-        bonus += chance_live_loaded * 100
+        bonus += chance_live_loaded
     
     return bonus
 
@@ -188,12 +196,12 @@ class BackshotRoulette:
         
         if state.live_shells + state.blank_shells != 0:
             state_eval += known_shell_bonus(move, state)
-            state_eval += item_usage_bonus(move, state)
             state_eval += shoot_other_person_bonus(move, state)
         
         #state_eval += item_bonus(state.player_items)
         #state_eval -= item_bonus(state.dealer_items)
         
+        state_eval += item_usage_bonus(move, state)
         state_eval += hand_saw_bonus(state)
         state_eval -= low_health_penalty(state)
         
@@ -221,19 +229,28 @@ class BackshotRoulette:
             position_eval = self.evaluate(last_move, state)
 
             return Move(None, position_eval)
-        
+
         all_moves = state.get_all_moves()
         all_moves = [move for move in all_moves if type(move) != int]
+        
+        if Items.MAGNIFYING_GLASS in (state.player_items if state.is_players_turn else state.dealer_items) and state.current_shell == None:
+            all_moves = [ValidMoves.USE_MAGNIFYING_GLASS]
+        
+        best_move = None
         
         if state.is_players_turn:
             max_eval = -INF
             for move in all_moves:
+                if is_redundant_move(move, state): continue
+                
                 possible_positions = state.move(move)
                 
                 if possible_positions == None: continue
                 
                 for position in possible_positions:
-                    if self.transposition_table[state, move] != None:
+                    if position == None: continue
+                    
+                    if False: #self.transposition_table[state, move] != None:
                         eval = self.transposition_table[state, move]
                         eval *= position.probabilty
                     else:
@@ -242,7 +259,9 @@ class BackshotRoulette:
                     if eval > max_eval:
                         max_eval = eval
                         best_move = move
+                    
                     alpha = max(alpha, eval)
+                    
                     if beta <= alpha:
                         break
             
@@ -250,17 +269,22 @@ class BackshotRoulette:
                     break
             
             self.positions_searched += 1
+            
             return Move(best_move, max_eval)
 
         else:
             min_eval = INF
             for move in all_moves:
+                if is_redundant_move(move, state): continue
+                
                 possible_positions = state.move(move)
                 
                 if possible_positions == None: continue
                 
                 for position in possible_positions:
-                    if self.transposition_table[state, move] != None:
+                    if position == None: continue
+                    
+                    if False: #self.transposition_table[state, move] != None:
                         eval = self.transposition_table[state, move]
                         eval *= position.probabilty
                     else:
@@ -269,6 +293,7 @@ class BackshotRoulette:
                     if eval < min_eval:
                         min_eval = eval
                         best_move = move
+                    
                     beta = min(beta, eval)
                     
                     if beta <= alpha:
@@ -278,4 +303,5 @@ class BackshotRoulette:
                     break
             
             self.positions_searched += 1
+            
             return Move(best_move, min_eval)
