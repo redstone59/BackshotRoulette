@@ -167,8 +167,8 @@ class Move:
         self.evaluation = evaluation
     
     def __str__(self):
-        if self.move_type == None: return f"Evaluation: {self.evaluation}"
-        return f"Move ({self.move_type}, {self.evaluation})"
+        if self.move_type == None: return f"Evaluation: {float(self.evaluation)}"
+        return f"Move ({self.move_type}, {float(self.evaluation)})"
 
 class BackshotRoulette:
     def __init__(self):
