@@ -173,6 +173,7 @@ class Move:
 class BackshotRoulette:
     def __init__(self):
         self.positions_searched = 0
+        self.verbose = False
     
     def evaluate(self, move: ValidMoves, state: BuckshotRouletteMove):
         # Evaluate how good the current players position is.
@@ -180,69 +181,86 @@ class BackshotRoulette:
         
         state_eval = 0
 
-        if state.live_shells == 0: return INF * (-1 if state.is_players_turn else 1 ) # Avoid reloads at all costs.
-            #return 0 # If there are no more live shells, it is a forced reload.
-        
         if state.player_health == 0: state_eval = -INF
-        if state.dealer_health == 0: state_eval = INF
+        elif state.dealer_health == 0: state_eval = INF
         
-        state_eval += known_shell_bonus(move, state)
+        if state.live_shells + state.blank_shells != 0:
+            state_eval += known_shell_bonus(move, state)
+            state_eval += item_usage_bonus(move, state)
+            state_eval += shoot_other_person_bonus(move, state)
+        
+        #state_eval += item_bonus(state.player_items)
+        #state_eval -= item_bonus(state.dealer_items)
+        
         state_eval += hand_saw_bonus(state)
-        
-        state_eval += item_bonus(state.player_items)
-        state_eval -= item_bonus(state.dealer_items)
-        state_eval += item_usage_bonus(move, state)
-        
         state_eval -= low_health_penalty(state)
-        state_eval += shoot_other_person_bonus(move, state)
         
-        state_eval += state.player_health * 25
-        state_eval -= state.dealer_health * 25
+        #state_eval += state.player_health * 100
+        #state_eval -= state.dealer_health * 100
+
+        health_difference = Fraction(state.player_health, state.player_health + state.dealer_health)
+
+        state_eval += health_difference * 100
 
         state_eval *= state.probabilty
 
         return state_eval
     
     def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []):
-        print("Starting search with depth", depth, "on line", ", ".join(convert_move_list(parent_moves)))
-        if 0 in [depth, state.live_shells, state.dealer_health, state.player_health]:
+        if self.verbose: print(f"Starting search with depth {depth} on moves {', '.join(convert_move_list(parent_moves))}")
+        if 0 in [depth, state.player_health, state.dealer_health, state.live_shells]:
             if len(parent_moves) >= 1:
                 last_move = parent_moves[-1]
             else:
                 last_move = None
-            
+
             position_eval = self.evaluate(last_move, state)
-            position_eval *= 1 if state.is_players_turn else -1
             
             return Move(None, position_eval)
-
+        
         all_moves = state.get_all_moves()
         all_moves = [move for move in all_moves if type(move) != int]
         
-        best_move = Move(None, INF * (-1 if state.is_players_turn else 1))
-
-        for move in all_moves:
-            positions = state.move(move)
-            
-            if is_redundant_move(move, state) or positions == None: 
-                continue
-
-            for position in positions:
-                if position == None or position.probabilty == 0: continue # Ignore improbable or invalid positions.
+        if state.is_players_turn:
+            max_eval = -INF
+            for move in all_moves:
+                possible_positions = state.move(move)
                 
-                self.positions_searched += 1
+                if possible_positions == None: continue
                 
-                eval = self.search(depth - 1, position, alpha, beta, parent_moves = parent_moves + [move]).evaluation
-                
-                if position.is_players_turn:
+                for position in possible_positions:
+                    eval = self.search(depth - 1, position, alpha, beta, parent_moves + [move]).evaluation
+                    if eval > max_eval:
+                        max_eval = eval
+                        best_move = move
                     alpha = max(alpha, eval)
-                else:
-                    eval *= -1
+                    if beta <= alpha:
+                        break
+            
+                if beta <= alpha:
+                    break
+            
+            self.positions_searched += 1
+            return Move(best_move, max_eval)
+
+        else:
+            min_eval = INF
+            for move in all_moves:
+                possible_positions = state.move(move)
+                
+                if possible_positions == None: continue
+                
+                for position in possible_positions:
+                    eval = self.search(depth - 1, position, alpha, beta, parent_moves + [move]).evaluation
+                    if eval < min_eval:
+                        min_eval = eval
+                        best_move = move
                     beta = min(beta, eval)
-                
-                if beta <= alpha: break
-                
-            if max_or_min(position.is_players_turn, eval, best_move.evaluation):
-                best_move = Move(move, eval)
-    
-        return best_move
+                    if beta <= alpha:
+                        break
+            
+                if beta <= alpha:
+                    break
+            
+            self.positions_searched += 1
+            return Move(best_move, min_eval)
