@@ -233,13 +233,13 @@ class BackshotRoulette:
         all_moves = state.get_all_moves()
         all_moves = [move for move in all_moves if type(move) != int]
         
+        # This looks really gross. Maybe compact into a single function? Or multiple functions? I don't know.
         if (Items.MAGNIFYING_GLASS in (state.player_items if state.is_players_turn else state.dealer_items)) \
            and (state.current_shell == None) \
            and (0 not in [state.live_shells, state.blank_shells]):
             all_moves = [ValidMoves.USE_MAGNIFYING_GLASS]
         
         best_move = None
-        
         best_eval = INF
         if state.is_players_turn: best_eval *= -1
         
@@ -265,10 +265,9 @@ class BackshotRoulette:
                         best_move = move
                     
                     alpha = max(alpha, eval)
-                
                 else:
-                    if eval < min_eval:
-                        min_eval = eval
+                    if eval < best_eval:
+                        best_eval = eval
                         best_move = move
                     
                     beta = min(beta, eval)
