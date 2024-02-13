@@ -250,6 +250,9 @@ class BackshotRoulette:
                 last_move = None
 
             position_eval = self.evaluate_position(last_move, state)
+            
+            transposition = Transposition(position_eval)
+            self.transposition_table.add(state, last_move, self.max_depth - shots_taken(parent_moves), transposition)
 
             return Move(None, position_eval * state.probabilty)
 
@@ -275,8 +278,10 @@ class BackshotRoulette:
             for position in possible_positions:
                 if position == None: continue
                 
-                if False: #self.transposition_table[state, move] != None:
-                    eval = self.transposition_table[state, move]
+                transposition_key = state, move, self.max_depth - shots_taken(parent_moves)
+                if self.transposition_table[transposition_key] != None:
+                    print("transposition accessed")
+                    eval = self.transposition_table[transposition_key].evaluation
                     eval *= position.probabilty
                 else:
                     eval = self.search(depth - 1, position, alpha, beta, parent_moves + [move]).evaluation
