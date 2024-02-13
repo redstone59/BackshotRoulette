@@ -233,75 +233,52 @@ class BackshotRoulette:
         all_moves = state.get_all_moves()
         all_moves = [move for move in all_moves if type(move) != int]
         
-        if Items.MAGNIFYING_GLASS in (state.player_items if state.is_players_turn else state.dealer_items) and state.current_shell == None:
+        if (Items.MAGNIFYING_GLASS in (state.player_items if state.is_players_turn else state.dealer_items)) \
+           and (state.current_shell == None) \
+           and (0 not in [state.live_shells, state.blank_shells]):
             all_moves = [ValidMoves.USE_MAGNIFYING_GLASS]
         
         best_move = None
         
-        if state.is_players_turn:
-            max_eval = -INF
-            for move in all_moves:
-                if is_redundant_move(move, state): continue
+        best_eval = INF
+        if state.is_players_turn: best_eval *= -1
+        
+        for move in all_moves:
+            if is_redundant_move(move, state): continue
+            
+            possible_positions = state.move(move)
+            
+            if possible_positions == None: continue
+            
+            for position in possible_positions:
+                if position == None: continue
                 
-                possible_positions = state.move(move)
+                if False: #self.transposition_table[state, move] != None:
+                    eval = self.transposition_table[state, move]
+                    eval *= position.probabilty
+                else:
+                    eval = self.search(depth - 1, position, alpha, beta, parent_moves + [move]).evaluation
                 
-                if possible_positions == None: continue
-                
-                for position in possible_positions:
-                    if position == None: continue
-                    
-                    if False: #self.transposition_table[state, move] != None:
-                        eval = self.transposition_table[state, move]
-                        eval *= position.probabilty
-                    else:
-                        eval = self.search(depth - 1, position, alpha, beta, parent_moves + [move]).evaluation
-                    
-                    if eval > max_eval:
-                        max_eval = eval
+                if state.is_players_turn:
+                    if eval > best_eval:
+                        best_eval = eval
                         best_move = move
                     
                     alpha = max(alpha, eval)
-                    
-                    if beta <= alpha:
-                        break
-            
-                if beta <= alpha:
-                    break
-            
-            self.positions_searched += 1
-            
-            return Move(best_move, max_eval)
-
-        else:
-            min_eval = INF
-            for move in all_moves:
-                if is_redundant_move(move, state): continue
                 
-                possible_positions = state.move(move)
-                
-                if possible_positions == None: continue
-                
-                for position in possible_positions:
-                    if position == None: continue
-                    
-                    if False: #self.transposition_table[state, move] != None:
-                        eval = self.transposition_table[state, move]
-                        eval *= position.probabilty
-                    else:
-                        eval = self.search(depth - 1, position, alpha, beta, parent_moves + [move]).evaluation
-                    
+                else:
                     if eval < min_eval:
                         min_eval = eval
                         best_move = move
                     
                     beta = min(beta, eval)
-                    
-                    if beta <= alpha:
-                        break
-            
+                
                 if beta <= alpha:
                     break
-            
-            self.positions_searched += 1
-            
-            return Move(best_move, min_eval)
+        
+            if beta <= alpha:
+                break
+        
+        self.positions_searched += 1
+        
+        return Move(best_move, best_eval)
