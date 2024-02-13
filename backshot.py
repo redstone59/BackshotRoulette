@@ -23,11 +23,15 @@ def convert_move_list(move_list: list[ValidMoves]):
                 resultant += ["player"]
     return resultant
 
-def hand_saw_bonus(state: BuckshotRouletteMove):
-    if state.is_players_turn and Items.HAND_SAW in state.dealer_items and state.player_health > 2:
+def hand_saw_penalty(state: BuckshotRouletteMove):
+    """
+    Penalises the current player for having 1 or 2 health when the other player has a hand saw.
+    Returns 150 if penalty conditions are met, else it returns 0.
+    """
+    if state.is_players_turn and Items.HAND_SAW in state.dealer_items and state.player_health <= 2:
         return 150
     
-    elif (not state.is_players_turn) and Items.HAND_SAW in state.player_items and state.dealer_health > 2:
+    elif (not state.is_players_turn) and Items.HAND_SAW in state.player_items and state.dealer_health <= 2:
         return 150
     
     return 0
@@ -80,6 +84,9 @@ def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
     return False
 
 def item_bonus(items: list):
+    """
+    Returns the sum of the value of every item in `items`. Analogous to material in chess.
+    """
     bonus = 0
     
     for item in items:
@@ -98,6 +105,7 @@ def item_bonus(items: list):
     return bonus
 
 def item_usage_bonus(move: ValidMoves, state: BuckshotRouletteMove):
+    
     match move:
         case ValidMoves.USE_BEER:
             if state.current_shell == None and state.live_shells < state.blank_shells: return 250
@@ -145,6 +153,11 @@ def known_shell_bonus(move: ValidMoves, state: BuckshotRouletteMove):
     return bonus
 
 def low_health_penalty(state: BuckshotRouletteMove):
+    """
+    Penalises for having 1 health left.
+    Returns 100 if the current player in the `state` has 1 health.
+    Returns 0 otherwise.
+    """
     if state.is_players_turn and state.player_health == 1:
         return 100
     if (not state.is_players_turn) and state.dealer_health == 1:
@@ -152,11 +165,21 @@ def low_health_penalty(state: BuckshotRouletteMove):
 
     return 0
 
-def max_or_min(is_players_turn: bool, a, b):
-    if a == None: return b
-    if b == None: return a
-    if is_players_turn: return max(a, b)
-    return min(a, b)
+def state_to_key(state: BuckshotRouletteMove):
+    """
+    Turns a given `BuckshotRouletteMove` into a key for the transposition table.
+
+    Args:
+        state (BuckshotRouletteMove): The position to convert.
+
+    Returns:
+        tuple: Transposition table key.
+    """
+    return (state.live_shells, state.blank_shells,
+            state.is_players_turn,
+            state.handcuffed, state.gun_is_sawed, state.current_shell,
+            state.dealer_health, state.player_health,
+            state.dealer_items, state.player_items)
 
 def shoot_other_person_bonus(move: ValidMoves, state: BuckshotRouletteMove):
     chance_live_loaded = Fraction(state.live_shells, state.live_shells + state.blank_shells)
@@ -170,6 +193,11 @@ def shoot_other_person_bonus(move: ValidMoves, state: BuckshotRouletteMove):
     
     return 0
 
+def shots_taken(move_list: list[ValidMoves]):
+    shots = move_list.count(ValidMoves.SHOOT_DEALER)
+    shots += move_list.count(ValidMoves.SHOOT_PLAYER)
+    return shots
+
 class Move:
     def __init__(self, move_type, evaluation):
         self.move_type = move_type
@@ -182,10 +210,12 @@ class Move:
 class BackshotRoulette:
     def __init__(self):
         self.positions_searched = 0
+        self.max_depth = 0
+        
         self.verbose = False
         self.transposition_table = TranspositionTable(64)
     
-    def evaluate(self, move: ValidMoves, state: BuckshotRouletteMove):
+    def evaluate_position(self, move: ValidMoves, state: BuckshotRouletteMove):
         # Evaluate how good the current players position is.
         # Should utilise turn probability, health, item count, knowing shells, etc.
         
@@ -200,35 +230,28 @@ class BackshotRoulette:
         
         #state_eval += item_bonus(state.player_items)
         #state_eval -= item_bonus(state.dealer_items)
-        
         state_eval += item_usage_bonus(move, state)
-        state_eval += hand_saw_bonus(state)
-        state_eval -= low_health_penalty(state)
         
-        #state_eval += state.player_health * 100
-        #state_eval -= state.dealer_health * 100
+        state_eval -= hand_saw_penalty(state)
+        state_eval -= low_health_penalty(state)
 
         health_difference = Fraction(state.player_health, state.player_health + state.dealer_health)
-
         state_eval += health_difference * 100
-
-        self.transposition_table.add(state, move, state_eval)
-
-        state_eval *= state.probabilty
 
         return state_eval
     
     def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []):
         if self.verbose: print(f"Starting search with depth {depth} on moves {', '.join(convert_move_list(parent_moves))}")
+        
         if 0 in [depth, state.player_health, state.dealer_health, state.live_shells]:
             if len(parent_moves) >= 1:
                 last_move = parent_moves[-1]
             else:
                 last_move = None
 
-            position_eval = self.evaluate(last_move, state)
+            position_eval = self.evaluate_position(last_move, state)
 
-            return Move(None, position_eval)
+            return Move(None, position_eval * state.probabilty)
 
         all_moves = state.get_all_moves()
         all_moves = [move for move in all_moves if type(move) != int]
@@ -240,8 +263,7 @@ class BackshotRoulette:
             all_moves = [ValidMoves.USE_MAGNIFYING_GLASS]
         
         best_move = None
-        best_eval = INF
-        if state.is_players_turn: best_eval *= -1
+        best_eval = -INF if state.is_players_turn else INF
         
         for move in all_moves:
             if is_redundant_move(move, state): continue
