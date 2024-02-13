@@ -2,6 +2,8 @@ from enum import *
 from fractions import Fraction
 from copy import deepcopy
 
+INF = 1000000
+
 class ValidMoves(Enum):
     SHOOT_DEALER = 0
     SHOOT_PLAYER = 1
