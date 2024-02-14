@@ -108,7 +108,7 @@ class BackshotRoulette:
         self.verbose = False
         self.transposition_table = TranspositionTable(64)
     
-    def evaluate_position(self, move: ValidMoves, state: BuckshotRouletteMove):
+    def evaluate_position(self, move: ValidMoves, state: BuckshotRouletteMove) -> Fraction:
         # Evaluate how good the current players position is.
         # Should utilise turn probability, health, item count, knowing shells, etc.
         
@@ -133,7 +133,41 @@ class BackshotRoulette:
 
         return state_eval
     
-    def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []):
+    def get_ordered_moves(self, state: BuckshotRouletteMove) -> list[ValidMoves]:
+        available_moves = state.get_all_moves()
+        available_moves = [move for move in available_moves if type(move) != int]
+        move_eval_dict = {}
+        
+        for move in available_moves:
+            possible_positions = state.move(move)
+            
+            if possible_positions == None: continue
+            
+            best_eval = -INF if state.is_players_turn else INF
+            
+            for position in possible_positions:
+                if position == None: continue
+                
+                transposition_key = (state, move)
+
+                if transposition_key in self.transposition_table:
+                    print("transposition accessed")
+                    position_eval = self.transposition_table[transposition_key].evaluation
+                else:
+                    position_eval = position.probabilty * 10
+                
+                if state.is_players_turn:
+                    best_eval = max(best_eval, position_eval)
+                else:
+                    best_eval = min(best_eval, position_eval)
+            
+            move_eval_dict[move] = best_eval
+        
+        sorted_moves = sorted(move_eval_dict, key = move_eval_dict.get)
+        
+        return sorted_moves
+    
+    def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []) -> Move:
         if self.verbose: print(f"Starting search with depth {depth} on moves {', '.join(convert_move_list(parent_moves))}")
         
         if 0 in [depth, state.player_health, state.dealer_health, state.live_shells]:
@@ -144,13 +178,12 @@ class BackshotRoulette:
 
             position_eval = self.evaluate_position(last_move, state)
             
-            transposition = Transposition(position_eval)
-            self.transposition_table.add(state, last_move, self.max_depth - shots_taken(parent_moves), transposition)
+            transposition = Transposition(position_eval, self.max_depth - shots_taken(parent_moves))
+            self.transposition_table.add(state, last_move, transposition)
 
             return Move(None, position_eval * state.probabilty, [last_move])
 
-        all_moves = state.get_all_moves()
-        all_moves = [move for move in all_moves if type(move) != int]
+        all_moves = self.get_ordered_moves(state)
         
         # This looks really gross. Maybe compact into a single function? Or multiple functions? I don't know.
         if (Items.MAGNIFYING_GLASS in (state.player_items if state.is_players_turn else state.dealer_items)) \
@@ -160,6 +193,7 @@ class BackshotRoulette:
         
         best_move = ValidMoves.SHOOT_PLAYER if state.is_players_turn else ValidMoves.SHOOT_DEALER
         best_eval = -INF if state.is_players_turn else INF
+        best_path = []
         
         for move in all_moves:
             if is_redundant_move(move, state): continue
@@ -171,11 +205,14 @@ class BackshotRoulette:
             for position in possible_positions:
                 if position == None: continue
                 
-                transposition_key = state, move, self.max_depth - shots_taken(parent_moves)
-                if self.transposition_table[transposition_key] != None:
+                transposition_key = state, move
+                current_turn = self.max_depth - shots_taken(parent_moves)
+                
+                if self.transposition_table[transposition_key] != None and self.transposition_table[transposition_key].depth == current_turn:
                     print("transposition accessed")
                     eval = self.transposition_table[transposition_key].evaluation
                     eval *= position.probabilty
+                    path = []
                 else:
                     lower_search = self.search(depth - 1, position, alpha, beta, parent_moves + [move])
                     eval = lower_search.evaluation
@@ -185,12 +222,14 @@ class BackshotRoulette:
                     if eval > best_eval:
                         best_eval = eval
                         best_move = move
+                        best_path = path
                     
                     alpha = max(alpha, eval)
                 else:
                     if eval < best_eval:
                         best_eval = eval
                         best_move = move
+                        best_path = path
                     
                     beta = min(beta, eval)
                 
@@ -202,4 +241,4 @@ class BackshotRoulette:
         
         self.positions_searched += 1
         
-        return Move(best_move, best_eval, [best_move] + path)
+        return Move(best_move, best_eval, [best_move] + best_path)
