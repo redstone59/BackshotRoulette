@@ -1,35 +1,37 @@
+import sys
+
 class Transposition:
-    def __init__(self, evaluation):
+    def __init__(self, evaluation, depth: int):
         self.evaluation = evaluation
+        self.depth = depth
 
 class TranspositionTable:
-    def __init__(self, max_mibibytes):
+    def __init__(self, max_mibibytes: int | float):
         self.transposition_dict = {}
         self.max_size = max_mibibytes * 2 ** 20
     
-    def add(self, state, move, depth: int, transposition: Transposition):
-        self.transposition_dict[state, move, depth] = transposition
-        if self.transposition_dict.__sizeof__() >= self.max_size:
+    def add(self, state, move, transposition: Transposition):
+        self.transposition_dict[state, move] = transposition
+        if sys.getsizeof(self.transposition_dict) >= self.max_size:
             print("culling")
             self.cull()
 
     def cull(self):
-        while self.transposition_dict.__sizeof__() >= self.max_size:
+        while sys.getsizeof(self.transposition_dict) >= self.max_size:
             first_key = list(self.transposition_dict.keys())[0]
-            del self.transposition_dict[first_key]
+            self.transposition_dict.pop(first_key)
 
-    def get(self, state, move, depth):
-        if state not in self.transposition_dict: return None
-        return self.transposition_dict[state, move, depth]
+    def get(self, state, move) -> Transposition:
+        if (state, move) not in self.transposition_dict: return None
+        return self.transposition_dict[state, move]
 
     def __contains__(self, key_tuple):
-        if len(key_tuple) != 3: raise KeyError()
         return key_tuple in self.transposition_dict
 
-    def __getitem__(self, key_tuple):
-        if len(key_tuple) != 3: raise KeyError()
+    def __getitem__(self, key_tuple) -> Transposition:
+        if len(key_tuple) != 2: raise KeyError("Transpositions take only 2 arguments: state and move")
         return self.get(*key_tuple)
     
     def __setitem__(self, key_tuple, transposition: Transposition):
-        if len(key_tuple) != 3: raise KeyError()
+        if len(key_tuple) != 2: raise KeyError("Transpositions take only 2 arguments: state and move")
         self.add(*key_tuple, transposition)
