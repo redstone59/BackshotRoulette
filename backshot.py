@@ -91,13 +91,14 @@ def shots_taken(move_list: list[ValidMoves]):
     return shots
 
 class Move:
-    def __init__(self, move_type, evaluation):
+    def __init__(self, move_type: ValidMoves, evaluation: int | Fraction, path = []):
         self.move_type = move_type
         self.evaluation = evaluation
+        self.path = path
     
     def __str__(self):
         if self.move_type == None: return f"Evaluation: {float(self.evaluation)}"
-        return f"Move ({self.move_type}, {float(self.evaluation)})"
+        return f"Move ({self.move_type}, {float(self.evaluation)})\nPath: {', '.join(convert_move_list(self.path))}"
 
 class BackshotRoulette:
     def __init__(self):
@@ -146,7 +147,7 @@ class BackshotRoulette:
             transposition = Transposition(position_eval)
             self.transposition_table.add(state, last_move, self.max_depth - shots_taken(parent_moves), transposition)
 
-            return Move(None, position_eval * state.probabilty)
+            return Move(None, position_eval * state.probabilty, [last_move])
 
         all_moves = state.get_all_moves()
         all_moves = [move for move in all_moves if type(move) != int]
@@ -157,7 +158,7 @@ class BackshotRoulette:
            and (0 not in [state.live_shells, state.blank_shells]):
             all_moves = [ValidMoves.USE_MAGNIFYING_GLASS]
         
-        best_move = None
+        best_move = ValidMoves.SHOOT_PLAYER if state.is_players_turn else ValidMoves.SHOOT_DEALER
         best_eval = -INF if state.is_players_turn else INF
         
         for move in all_moves:
@@ -176,7 +177,9 @@ class BackshotRoulette:
                     eval = self.transposition_table[transposition_key].evaluation
                     eval *= position.probabilty
                 else:
-                    eval = self.search(depth - 1, position, alpha, beta, parent_moves + [move]).evaluation
+                    lower_search = self.search(depth - 1, position, alpha, beta, parent_moves + [move])
+                    eval = lower_search.evaluation
+                    path = lower_search.path
                 
                 if state.is_players_turn:
                     if eval > best_eval:
@@ -199,4 +202,4 @@ class BackshotRoulette:
         
         self.positions_searched += 1
         
-        return Move(best_move, best_eval)
+        return Move(best_move, best_eval, [best_move] + path)
