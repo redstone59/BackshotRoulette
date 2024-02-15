@@ -69,6 +69,46 @@ def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
     
     return False
 
+def obvious_move_exists(state: BuckshotRouletteMove):
+    if state.is_players_turn:
+        current_items = state.player_items
+        current_health = state.player_health
+        shoot_other_player = ValidMoves.SHOOT_DEALER
+        shoot_self = ValidMoves.SHOOT_PLAYER
+    else:
+        current_items = state.dealer_items
+        current_health = state.dealer_health
+        shoot_other_player = ValidMoves.SHOOT_PLAYER
+        shoot_self = ValidMoves.SHOOT_DEALER
+    
+    # Force shooting other player if the known shell is live.
+    if state.current_shell == "live":
+        if Items.HAND_SAW in current_items:
+            return ValidMoves.USE_HAND_SAW
+        else:
+            return shoot_other_player
+    
+    # Force shooting self if the known shell is blank.
+    if state.current_shell == "blank":
+        return shoot_self
+    
+    # Force magnifying glass usage if the shell isn't known.
+    unknown_shell = state.current_shell == None
+    one_of_each_shell = 0 not in [state.live_shells, state.blank_shells]
+    
+    if Items.MAGNIFYING_GLASS in current_items and unknown_shell and one_of_each_shell:
+        return ValidMoves.USE_MAGNIFYING_GLASS
+    
+    # Force cigarette usage if not at max health.
+    if Items.CIGARETTES in current_items and current_health != state.max_health:
+        return ValidMoves.USE_CIGARETTES
+    
+    # Force handcuff usage if there's only one blank shell left. (Force a guaranteed shot.)
+    if Items.HANDCUFFS in current_items and state.blank_shells == 1:
+        return ValidMoves.USE_HANDCUFFS
+    
+    return None
+
 def state_to_key(state: BuckshotRouletteMove):
     """
     Turns a given `BuckshotRouletteMove` into a key for the transposition table.
@@ -183,13 +223,13 @@ class BackshotRoulette:
 
             return Move(None, position_eval * state.probabilty, [last_move])
 
-        all_moves = self.get_ordered_moves(state)
+        #all_moves = self.get_ordered_moves(state)
+        all_moves = state.get_all_moves()
         
-        # This looks really gross. Maybe compact into a single function? Or multiple functions? I don't know.
-        if (Items.MAGNIFYING_GLASS in (state.player_items if state.is_players_turn else state.dealer_items)) \
-           and (state.current_shell == None) \
-           and (0 not in [state.live_shells, state.blank_shells]):
-            all_moves = [ValidMoves.USE_MAGNIFYING_GLASS]
+        # Force play any obvious moves. Explained in the comments of the function.
+        obvious_move = obvious_move_exists(state)
+        if obvious_move != None:
+            all_moves = [obvious_move]
         
         best_move = ValidMoves.SHOOT_PLAYER if state.is_players_turn else ValidMoves.SHOOT_DEALER
         best_eval = -INF if state.is_players_turn else INF
