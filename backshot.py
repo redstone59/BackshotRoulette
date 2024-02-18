@@ -109,6 +109,25 @@ def obvious_move_exists(state: BuckshotRouletteMove):
     
     return None
 
+def items_to_string(item_list: list[Items]):
+    resultant = []
+
+    for item in item_list:
+        match item:
+            case Items.HANDCUFFS:
+                resultant += ["h"]
+            case Items.HAND_SAW:
+                resultant += ["s"]
+            case Items.CIGARETTES:
+                resultant += ["c"]
+            case Items.BEER:
+                resultant += ["b"]
+            case Items.MAGNIFYING_GLASS:
+                resultant += ["m"]
+    
+    resultant.sort()
+    return "".join(resultant)
+
 def state_to_key(state: BuckshotRouletteMove):
     """
     Turns a given `BuckshotRouletteMove` into a key for the transposition table.
@@ -119,11 +138,39 @@ def state_to_key(state: BuckshotRouletteMove):
     Returns:
         tuple: Transposition table key.
     """
-    return (state.live_shells, state.blank_shells,
-            state.is_players_turn,
-            state.handcuffed, state.gun_is_sawed, state.current_shell,
-            state.dealer_health, state.player_health,
-            state.dealer_items, state.player_items)
+
+    #
+    # position key (should be) a 17 bit number
+    # lllbbbPhsccdddppp
+    #
+    # l, b -> live and blank shells
+    # P, h, s, c -> is_players_turn, handcuffed?, sawed gun?, current shell 
+    # d, p -> dealer, player health
+    #
+
+    key = state.live_shells
+    key <<= 3
+    key += state.blank_shells
+    key <<= 3
+    key += state.is_players_turn
+    key <<= 1
+    key += state.handcuffed
+    key <<= 1
+    key += state.gun_is_sawed
+    key <<= 1
+    match state.current_shell:
+        case None:
+            key += 0b00
+        case "live":
+            key += 0b01
+        case "blank":
+            key += 0b10
+    key <<= 2
+    key += state.dealer_health
+    key <<= 3
+    key += state.player_health
+
+    return key, items_to_string(state.dealer_items), items_to_string(state.player_items)
 
 def shots_taken(move_list: list[ValidMoves]):
     shots = move_list.count(ValidMoves.SHOOT_DEALER)
