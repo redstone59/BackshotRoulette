@@ -93,10 +93,11 @@ def obvious_move_exists(state: BuckshotRouletteMove):
         return shoot_self
     
     # Force magnifying glass usage if the shell isn't known.
+    has_magnifying_glass = Items.MAGNIFYING_GLASS in current_items
     unknown_shell = state.current_shell == None
     one_of_each_shell = 0 not in [state.live_shells, state.blank_shells]
     
-    if Items.MAGNIFYING_GLASS in current_items and unknown_shell and one_of_each_shell:
+    if has_magnifying_glass and unknown_shell and one_of_each_shell:
         return ValidMoves.USE_MAGNIFYING_GLASS
     
     # Force cigarette usage if not at max health.
@@ -268,10 +269,9 @@ class BackshotRoulette:
             transposition = Transposition(position_eval, self.max_depth - shots_taken(parent_moves))
             self.transposition_table.add(state, last_move, transposition)
 
-            return Move(None, position_eval * state.probabilty, [last_move])
+            return Move(None, position_eval * state.probabilty, [])
 
-        #all_moves = self.get_ordered_moves(state)
-        all_moves = state.get_all_moves()
+        all_moves = self.get_ordered_moves(state)
         
         # Force play any obvious moves. Explained in the comments of the function.
         obvious_move = obvious_move_exists(state)
@@ -283,7 +283,7 @@ class BackshotRoulette:
         best_path = []
         
         for move in all_moves:
-            if is_redundant_move(move, state): continue
+            if obvious_move == None and is_redundant_move(move, state): continue
             
             possible_positions = state.move(move)
             
@@ -327,5 +327,4 @@ class BackshotRoulette:
                 break
         
         self.positions_searched += 1
-        
         return Move(best_move, best_eval, [best_move] + best_path)
