@@ -21,78 +21,38 @@ def string_to_item(item_string: str):
                 items += [Items.MAGNIFYING_GLASS]
     
     return items
-        
 
-inputter_is_idiot = True
+def idiot_input(prompt: object = "", condition = lambda x: 1):
+    inputter_is_idiot = True
+    
+    while inputter_is_idiot:
+        var = input(prompt)
+        if condition(var): return var
+
+IS_DIGIT_STRING = lambda x: x.isdigit() if type(x) == str else False
 
 is_players_turn = input("Is it the players turn? (Y/N) ").lower().startswith("y")
 
-while inputter_is_idiot:
-    max_health = input("Maximum health? ")
-    if max_health.isdigit():
-        max_health = int(max_health)
-        inputter_is_idiot = False
+max_health = int(idiot_input("Maximum health? ", IS_DIGIT_STRING))
+dealer_health = int(idiot_input("Dealer's health? ", IS_DIGIT_STRING))
+player_health = int(idiot_input("Player's health? ", IS_DIGIT_STRING))
 
-inputter_is_idiot = True
-
-while inputter_is_idiot:
-    dealer_health = input("Dealer's health? ")
-    if dealer_health.isdigit():
-        dealer_health = int(dealer_health)
-        inputter_is_idiot = False
-
-inputter_is_idiot = True
-
-while inputter_is_idiot:
-    player_health = input("Player's health? ")
-    if player_health.isdigit():
-        player_health = int(player_health)
-        inputter_is_idiot = False
-
-inputter_is_idiot = True
-
-while inputter_is_idiot:
-    lives = input("# live shells? ")
-    if lives.isdigit():
-        lives = int(lives)
-        inputter_is_idiot = False
-
-inputter_is_idiot = True
-
-while inputter_is_idiot:
-    blanks = input("# blank shells? ")
-    if blanks.isdigit():
-        blanks = int(blanks)
-        inputter_is_idiot = False
+lives = int(idiot_input("# live shells? ", IS_DIGIT_STRING))
+blanks = int(idiot_input("# blank shells? ", IS_DIGIT_STRING))
 
 print("Item Key: [H]andcuffs, Hand [S]aw, [C]igarettes, [B]eer, [M]agnifying Glass")
 
-inputter_is_idiot = True
+dealer_items = string_to_item(idiot_input("Dealer's items? ", lambda x: len(x) <= 8))
+player_items = string_to_item(idiot_input("Player's items? ", lambda x: len(x) <= 8))
 
-while inputter_is_idiot:
-    dealer_items = input("Dealer items? ")
-    if len(dealer_items) <= 8:
-        dealer_items = string_to_item(dealer_items)
-        inputter_is_idiot = False
+current_shell = input("Current shell? ('live', 'blank', leave empty for unknown) ").lower()
 
-inputter_is_idiot = True
-
-while inputter_is_idiot:
-    player_items = input("Player items? ")
-    if len(player_items) <= 8:
-        player_items = string_to_item(player_items)
-        inputter_is_idiot = False
-
-inputter_is_idiot = True
-
-while inputter_is_idiot:
-    current_shell = input("Current shell? ('live', 'blank', leave empty for unknown) ").lower()
-    if current_shell.startswith("l"):
-        current_shell = "live"
-        inputter_is_idiot = False
-    elif current_shell.startswith("b"):
-        current_shell = "blank"
-        inputter_is_idiot = False
+if current_shell.startswith("l"):
+    current_shell = "live"
+elif current_shell.startswith("b"):
+    current_shell = "blank"
+else:
+    current_shell = None
 
 handcuffed = input("Is the other player handcuffed? (Y/N) ").lower().startswith("y")
 sawed = input("Is the gun sawed? (Y/N) ").lower().startswith("y")
