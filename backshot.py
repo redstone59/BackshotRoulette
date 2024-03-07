@@ -1,6 +1,7 @@
 from roulette import *
 from bonuses import *
 from transposition_tables import *
+from itertools import permutations
 
 def convert_move_list(move_list: list[ValidMoves]):
     resultant = []
@@ -81,8 +82,10 @@ def obvious_move_exists(state: BuckshotRouletteMove):
         shoot_other_player = ValidMoves.SHOOT_PLAYER
         shoot_self = ValidMoves.SHOOT_DEALER
     
-    # Force shooting other player if the known shell is live.
-    if state.current_shell == "live":
+    # Force shooting other player if the known shell is live and the other player has more than 1 health.
+    other_players_health = state.dealer_health if state.is_players_turn else state.dealer_health
+    
+    if state.current_shell == "live" and other_players_health > 1:
         if Items.HAND_SAW in current_items:
             return ValidMoves.USE_HAND_SAW
         else:
@@ -196,9 +199,10 @@ class BackshotRoulette:
         self.verbose = False
         self.transposition_table = TranspositionTable(64)
     
-    def evaluate_position(self, move: ValidMoves, state: BuckshotRouletteMove) -> Fraction:
-        # Evaluate how good the current players position is.
-        # Should utilise turn probability, health, item count, knowing shells, etc.
+    def predicted_evaluation(self, move: ValidMoves, state: BuckshotRouletteMove) -> Fraction:
+        """
+        Estimates a position's evaluation.
+        """
         
         state_eval = 0
 
@@ -221,7 +225,19 @@ class BackshotRoulette:
 
         return state_eval
     
+    def evaluate_position(self, move: ValidMoves, state: BuckshotRouletteMove) -> Fraction:
+        pass
+    
     def get_ordered_moves(self, state: BuckshotRouletteMove) -> list[ValidMoves]:
+        """
+        Returns a list of moves ordered by predicted evaluation or transposition.
+
+        Args:
+            state (BuckshotRouletteMove): A given state in Buckshot Roulette.
+
+        Returns:
+            list[ValidMoves]: An ordered list of moves, sorted from highest predicted evaluation to lowest.
+        """
         available_moves = state.get_all_moves()
         available_moves = [move for move in available_moves if type(move) != int]
         move_eval_dict = {}
@@ -242,7 +258,7 @@ class BackshotRoulette:
                     print("transposition accessed")
                     position_eval = self.transposition_table[transposition_key].evaluation
                 else:
-                    position_eval = position.probabilty * 10
+                    position_eval = self.predicted_evaluation(move, position)
                 
                 if state.is_players_turn:
                     best_eval = max(best_eval, position_eval)
