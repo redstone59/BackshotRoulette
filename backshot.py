@@ -85,14 +85,14 @@ def obvious_move_exists(state: BuckshotRouletteMove):
     # Force shooting other player if the known shell is live and the other player has more than 1 health.
     other_players_health = state.dealer_health if state.is_players_turn else state.dealer_health
     
-    if state.current_shell == "live" and other_players_health > 1:
+    if (state.current_shell == "live" or state.blank_shells == 0) and other_players_health > 1:
         if Items.HAND_SAW in current_items:
             return ValidMoves.USE_HAND_SAW
         else:
             return shoot_other_player
     
     # Force shooting self if the known shell is blank.
-    if state.current_shell == "blank":
+    if state.current_shell == "blank" or state.live_shells == 0:
         return shoot_self
     
     # Force magnifying glass usage if the shell isn't known.
@@ -107,8 +107,8 @@ def obvious_move_exists(state: BuckshotRouletteMove):
     if Items.CIGARETTES in current_items and current_health != state.max_health:
         return ValidMoves.USE_CIGARETTES
     
-    # Force handcuff usage if there's only one blank shell left. (Force a guaranteed shot.)
-    if Items.HANDCUFFS in current_items and state.blank_shells == 1:
+    # Force handcuff usage if there's at least one blank shell left. (Force a guaranteed shot. Or two.)
+    if Items.HANDCUFFS in current_items and state.blank_shells <= 1:
         return ValidMoves.USE_HANDCUFFS
     
     return None
