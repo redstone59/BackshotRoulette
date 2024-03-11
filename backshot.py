@@ -189,7 +189,7 @@ class Move:
     
     def __str__(self):
         if self.move_type == None: return f"Evaluation: {float(self.evaluation)}"
-        return f"Move ({self.move_type}, Chance dealer kills player: {float(self.evaluation)*100:.2f})\nPath: {', '.join(convert_move_list(self.path))}"
+        return f"Move ({self.move_type}, Chance dealer kills player: {float(self.evaluation)*100:.2f}%)\nPath: {', '.join(convert_move_list(self.path))}"
 
 class BackshotRoulette:
     def __init__(self):
@@ -342,7 +342,8 @@ class BackshotRoulette:
         
         if 0 in [depth, state.player_health, state.dealer_health, state.live_shells]:
             chance_player_lives = 1 - self.evaluate_position(state)
-            return Move(None, chance_player_lives * state.probabilty, [])
+            health_difference = Fraction(state.player_health, state.dealer_health + state.player_health)
+            return Move(None, chance_player_lives * health_difference * state.probabilty)
 
         all_moves = self.get_ordered_moves(state)
         
