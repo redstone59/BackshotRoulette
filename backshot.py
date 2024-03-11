@@ -189,7 +189,7 @@ class Move:
     
     def __str__(self):
         if self.move_type == None: return f"Evaluation: {float(self.evaluation)}"
-        return f"Move ({self.move_type}, {float(self.evaluation)})\nPath: {', '.join(convert_move_list(self.path))}"
+        return f"Move ({self.move_type}, Chance to kill dealer: {float(self.evaluation)*100:.2f})\nPath: {', '.join(convert_move_list(self.path))}"
 
 class BackshotRoulette:
     def __init__(self):
@@ -225,8 +225,59 @@ class BackshotRoulette:
 
         return state_eval
     
-    def evaluate_position(self, move: ValidMoves, state: BuckshotRouletteMove) -> Fraction:
-        pass
+    def evaluate_position(self, state: BuckshotRouletteMove) -> Fraction:   
+        if state.is_players_turn:
+            # Since it isn't the dealer's turn, we evaluate based on the mean probability that the dealer can kill us on the next turn
+            # This is done by calculating the probabilities that the dealer could kill the player after a "bullet modifying move" (shooting, beer)
+            
+            # Shooting the dealer can result in one less live or one less blank
+            # Let L be the number of live shells and B the number of blank shells
+            #   1/2(L/(L+B-1) + (L-1)/(L+B-1))
+            # = 1/2((L+L-1)/(L+B-1))
+            # = (2L-1)/(2*(L+B-1))
+            
+            denominator = state.live_shells + state.blank_shells - 1
+            if denominator > 0:
+                shoot_dealer_eval = Fraction(2 * state.live_shells - 1, 2 * denominator)
+            else:
+                shoot_dealer_eval = Fraction(1, 1)
+            
+            # This one is trickier to explain.
+            
+            shoot_self_eval = Fraction(1, 1)
+            
+            for n in range(1, state.blank_shells):
+                denominator = state.live_shells + state.blank_shells - n
+                
+                if denominator > 0:
+                    shoot_self_eval += Fraction(state.live_shells - 1, denominator)
+                else:
+                    shoot_dealer_eval += Fraction(1, 1)
+            
+            shoot_self_eval *= Fraction(1, state.blank_shells) if state.blank_shells > 0 else Fraction(1, 1)
+            
+            # 
+            
+            if ValidMoves.USE_BEER in state.get_all_moves():
+                denominator = state.live_shells + state.blank_shells - 2
+                if denominator > 0:
+                    use_beer_eval = Fraction(4 * state.live_shells - 3, 4 * denominator)
+                else:
+                    use_beer_eval = Fraction(1, 1)
+            else:
+                if state.blank_shells > 0:
+                    use_beer_eval = Fraction(state.live_shells, state.live_shells + state.blank_shells)
+                else:
+                    use_beer_eval = Fraction(1, 1)
+            
+            return max(shoot_dealer_eval, shoot_self_eval, use_beer_eval)
+        
+        if state.blank_shells > 0:
+            dealer_kill_probability = Fraction(state.live_shells, state.live_shells + state.blank_shells)
+        else:
+            dealer_kill_probability = Fraction(1, 1)
+        
+        return dealer_kill_probability
     
     def get_ordered_moves(self, state: BuckshotRouletteMove) -> list[ValidMoves]:
         """
@@ -275,17 +326,8 @@ class BackshotRoulette:
         if self.verbose: print(f"Starting search with depth {depth} on moves {', '.join(convert_move_list(parent_moves))}")
         
         if 0 in [depth, state.player_health, state.dealer_health, state.live_shells]:
-            if len(parent_moves) >= 1:
-                last_move = parent_moves[-1]
-            else:
-                last_move = None
-
-            position_eval = self.evaluate_position(last_move, state)
-            
-            transposition = Transposition(position_eval, self.max_depth - shots_taken(parent_moves))
-            self.transposition_table.add(state, last_move, transposition)
-
-            return Move(None, position_eval * state.probabilty, [])
+            chance_player_lives = 1 - self.evaluate_position(state)
+            return Move(None, chance_player_lives * state.probabilty, [])
 
         all_moves = self.get_ordered_moves(state)
         
