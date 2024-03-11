@@ -62,7 +62,7 @@ def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
             elif (not state.is_players_turn) and state.player_health == 1: return True
         
         case ValidMoves.USE_HANDCUFFS:
-            if state.handcuffed == True: return True
+            if state.handcuffed > 0: return True
         
         case ValidMoves.USE_MAGNIFYING_GLASS:
             if state.current_shell != None: return True
@@ -145,7 +145,7 @@ def state_to_key(state: BuckshotRouletteMove):
 
     #
     # position key (should be) a 17 bit number
-    # lllbbbPhsccdddppp
+    # lllbbbPhhsccdddppp
     #
     # l, b -> live and blank shells
     # P, h, s, c -> is_players_turn, handcuffed?, sawed gun?, current shell 
@@ -159,7 +159,7 @@ def state_to_key(state: BuckshotRouletteMove):
     key += state.is_players_turn
     key <<= 1
     key += state.handcuffed
-    key <<= 1
+    key <<= 2
     key += state.gun_is_sawed
     key <<= 1
     match state.current_shell:

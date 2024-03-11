@@ -54,12 +54,12 @@ elif current_shell.startswith("b"):
 else:
     current_shell = None
 
-handcuffed = input("Is the other player handcuffed? (Y/N) ").lower().startswith("y")
+handcuffed = int(idiot_input("Is the other player handcuffed? (0 - No, 1 - Has already skipped turn, 2 - Has not skipped turn) ", lambda x: IS_DIGIT_STRING(x) and x in ["0", "1", "2"]))
 sawed = input("Is the gun sawed? (Y/N) ").lower().startswith("y")
 
-position = BuckshotRouletteMove(is_players_turn,   # player's turn?
-                                max_health, dealer_health, player_health, # health
-                                lives, blanks,    # live / blank
+position = BuckshotRouletteMove(is_players_turn,
+                                max_health, dealer_health, player_health,
+                                lives, blanks,
                                 dealer_items,
                                 player_items)
 

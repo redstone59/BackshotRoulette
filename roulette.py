@@ -31,8 +31,8 @@ class BuckshotRouletteMove:
                  player_health: int, 
                  live_shells: int, 
                  blank_shells: int, 
-                 dealer_items = [], 
-                 player_items = []
+                 dealer_items: list, 
+                 player_items: list
                  ):
         
         self.probabilty = Fraction(1, 1)
@@ -41,7 +41,7 @@ class BuckshotRouletteMove:
         self.blank_shells = blank_shells
         
         self.is_players_turn = is_players_turn
-        self.handcuffed = False
+        self.handcuffed = 0 # 0 represents no handcuffs, 1 means handcuffs are on but will go next turn, 2 means handcuffs are on and will skip next turn
         self.gun_is_sawed = False
         self.current_shell = None
         
@@ -57,8 +57,8 @@ class BuckshotRouletteMove:
         current_items = self.player_items if self.is_players_turn else self.dealer_items
         
         if Items.MAGNIFYING_GLASS in current_items: all_moves += [ValidMoves.USE_MAGNIFYING_GLASS]
-        if Items.HAND_SAW in current_items: all_moves += [ValidMoves.USE_HAND_SAW]
-        if Items.HANDCUFFS in current_items: all_moves += [ValidMoves.USE_HANDCUFFS]
+        if Items.HAND_SAW in current_items and self.gun_is_sawed == False: all_moves += [ValidMoves.USE_HAND_SAW]
+        if Items.HANDCUFFS in current_items and self.handcuffed == 0: all_moves += [ValidMoves.USE_HANDCUFFS]
         if Items.CIGARETTES in current_items: all_moves += [ValidMoves.USE_CIGARETTES]
         if Items.BEER in current_items: all_moves += [ValidMoves.USE_BEER]
         
@@ -98,11 +98,12 @@ class BuckshotRouletteMove:
                 live_move.current_shell = None
                 live_move.gun_is_sawed = False
                 
-                if not self.handcuffed:
+                if self.handcuffed == 2: # If handcuffed are newly applied, skip the turn
                     live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots dealer with a live, it is not the players turn. If the dealer shoots themself with a live, it is the players turn.
-                else:
-                    live_move.handcuffed = False
-                    blank_move.handcuffed = False
+                
+                if self.handcuffed > 0: # Decrement turns left until next handcuff
+                    live_move.handcuffed -= 1
+                    blank_move.handcuffed -= 1
 
                 blank_move.current_shell = None
                 blank_move.is_players_turn = False # If the player shoots the dealer with a blank, it is not the players turn. If the dealer shoots themself with a blank, it is not the players turn.
@@ -116,11 +117,12 @@ class BuckshotRouletteMove:
                 live_move.current_shell = None
                 live_move.gun_is_sawed = False
                 
-                if not self.handcuffed:
+                if self.handcuffed == 2: # If handcuffed are newly applied, skip the turn
                     live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots themself with a live, it is not the players turn. If the dealer shoots the player with a live, it is the players turn.
-                else:
-                    live_move.handcuffed = False
-                    blank_move.handcuffed = False
+                
+                if self.handcuffed > 0: # Decrement turns left until next handcuff
+                    live_move.handcuffed -= 1
+                    blank_move.handcuffed -= 1
                 
                 blank_move.current_shell = None
                 blank_move.is_players_turn = True # If the player shoots themself with a blank, it is the players turn. If the dealer shoots the player with a blank, it is the players turn.
@@ -172,7 +174,7 @@ class BuckshotRouletteMove:
                 else:
                     next_move.dealer_items.remove(Items.HANDCUFFS)
                 
-                next_move.handcuffed = True
+                next_move.handcuffed = 2
                 
                 return next_move,
                 
