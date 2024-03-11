@@ -85,8 +85,8 @@ def obvious_move_exists(state: BuckshotRouletteMove):
     # Force shooting other player if the known shell is live and the other player has more than 1 health.
     other_players_health = state.dealer_health if state.is_players_turn else state.dealer_health
     
-    if (state.current_shell == "live" or state.blank_shells == 0) and other_players_health > 1:
-        if Items.HAND_SAW in current_items:
+    if (state.current_shell == "live" or state.blank_shells == 0):
+        if other_players_health <= 2 and not state.gun_is_sawed and Items.HAND_SAW in current_items:
             return ValidMoves.USE_HAND_SAW
         else:
             return shoot_other_player
