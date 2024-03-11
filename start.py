@@ -23,9 +23,7 @@ def string_to_item(item_string: str):
     return items
 
 def idiot_input(prompt: object = "", condition = lambda x: 1):
-    inputter_is_idiot = True
-    
-    while inputter_is_idiot:
+    while True:
         var = input(prompt)
         if condition(var): return var
 
@@ -74,9 +72,10 @@ start_time = time.time()
 for depth in range (1, max_depth + 1):
     depth_start_time = time.time()
     bot.max_depth = depth
+    bot.positions_searched = 0
     
     print("Starting search with depth", depth)
     print(bot.search(depth, position))
-    print(f"Searched {bot.positions_searched} positions in {time.time() - depth_start_time} seconds.\a")
+    print(f"Searched {bot.positions_searched} positions in {time.time() - depth_start_time} seconds.")
 
-print(f"Searched {bot.positions_searched} positions in {time.time() - start_time} seconds.\a")
+print(f"Completed search in {time.time() - start_time} seconds.")
