@@ -243,6 +243,8 @@ class BackshotRoulette:
                 shoot_dealer_eval = Fraction(1, 1)
             
             # This one is trickier to explain.
+            # Just, https://cdn.discordapp.com/attachments/1214864872001634374/1216704848293134358/image.png?ex=66015bb1&is=65eee6b1&hm=a3fdd531492b59d0a5802bedaec171791997e8e04553743fb5bcf71589d44b36&
+            # Same variable names as last time.
             
             shoot_self_eval = Fraction(1, 1)
             
@@ -256,7 +258,20 @@ class BackshotRoulette:
             
             shoot_self_eval *= Fraction(1, state.blank_shells) if state.blank_shells > 0 else Fraction(1, 1)
             
+            # Using a beer can lead to four outcomes.
             # 
+            #  racking         shooting
+            #
+            #                     live +- (L-2)/(L+B-2)
+            #    live +- (L-1)/(L+B-1) +
+            #         |          blank +- (L-1)/(L+B-2)
+            # L/(L+B) +
+            #         |           live +- (L-1)/(L+B-2)
+            #   blank +----- L/(L+B-1) +
+            #                    blank +----- L/(L+B-2)
+            #
+            # Summing the probabilities and dividing by 4 yields the average probability of
+            # (4L-3)/(4(L+B-2))
             
             if ValidMoves.USE_BEER in state.get_all_moves():
                 denominator = state.live_shells + state.blank_shells - 2
@@ -270,7 +285,7 @@ class BackshotRoulette:
                 else:
                     use_beer_eval = Fraction(1, 1)
             
-            return max(shoot_dealer_eval, shoot_self_eval, use_beer_eval)
+            return min(shoot_dealer_eval, shoot_self_eval, use_beer_eval)
         
         if state.blank_shells > 0:
             dealer_kill_probability = Fraction(state.live_shells, state.live_shells + state.blank_shells)
