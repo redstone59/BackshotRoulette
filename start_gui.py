@@ -44,7 +44,7 @@ class GraphicBackshot: # ha ha ha ha ha
     
     def set_up_inputs(self):
         self.maximum_health = tk.Spinbox(self.window,
-                                         from_ = 0,
+                                         from_ = 1,
                                          to = 5,
                                          font = font(16),
                                          state = "readonly"
