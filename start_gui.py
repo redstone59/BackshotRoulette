@@ -37,7 +37,7 @@ class GraphicBackshot: # ha ha ha ha ha
         self.window = tk.Tk()
         self.window.title("Backshot Roulette GUI")
         self.window.geometry("480x720")
-        self.window.resizable(False, False)
+        self.window.resizable(True, False)
         
         self.set_up_labels()
         self.set_up_inputs()
@@ -51,14 +51,14 @@ class GraphicBackshot: # ha ha ha ha ha
                                          )
         self.maximum_health.grid(row = 1, column = 1)
         self.dealer_health = tk.Spinbox(self.window,
-                                        from_ = 0,
+                                        from_ = 1,
                                         to = 5,
                                         font = font(16),
                                         state = "readonly"
                                         )
         self.dealer_health.grid(row = 2, column = 1)
         self.player_health = tk.Spinbox(self.window,
-                                        from_ = 0,
+                                        from_ = 1,
                                         to = 5,
                                         font = font(16),
                                         state = "readonly"
@@ -189,10 +189,12 @@ class GraphicBackshot: # ha ha ha ha ha
         self.result_label.grid(row = 16, column = 0, columnspan = 2)
         
     def search(self):
+        self.result_label["text"] = "Searching..."
+        
         is_players_turn = bool(self.is_players_turn.get())
         max_health = get_int_value(self.maximum_health)
-        dealer_health = get_int_value(self.dealer_health)
-        player_health = get_int_value(self.player_health)
+        dealer_health = max(max_health, get_int_value(self.dealer_health))
+        player_health = max(max_health, get_int_value(self.player_health))
         lives = get_int_value(self.live_shells)
         blanks = get_int_value(self.blank_shells)
         dealer_items = string_to_item(self.dealer_items.get())[:8]

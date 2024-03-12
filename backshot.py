@@ -378,8 +378,10 @@ class BackshotRoulette:
         
         for move in all_moves:
             if obvious_move == None and is_redundant_move(move, state): continue
-            
-            possible_positions = state.move(move)
+            try:
+                possible_positions = state.move(move)
+            except InvalidMoveError:
+                continue
             
             if possible_positions == None: continue
             
