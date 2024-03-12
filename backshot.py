@@ -317,14 +317,15 @@ class BackshotRoulette:
             
             for position in possible_positions:
                 if position == None: continue
-                
+                """
                 transposition_key = (state, move)
 
                 if transposition_key in self.transposition_table:
                     print("transposition accessed")
                     position_eval = self.transposition_table[transposition_key].evaluation
                 else:
-                    position_eval = self.predicted_evaluation(move, position)
+                """ 
+                position_eval = self.predicted_evaluation(move, position)
                 
                 if state.is_players_turn:
                     best_eval = max(best_eval, position_eval)
@@ -365,7 +366,7 @@ class BackshotRoulette:
             
             for position in possible_positions:
                 if position == None: continue
-                
+                """
                 transposition_key = state, move
                 current_turn = self.max_depth - shots_taken(parent_moves)
                 
@@ -374,10 +375,11 @@ class BackshotRoulette:
                     eval = self.transposition_table[transposition_key].evaluation
                     eval *= position.probabilty
                     path = []
-                else:
-                    lower_search = self.search(depth - 1, position, alpha, beta, parent_moves + [move])
-                    eval = lower_search.evaluation
-                    path = lower_search.path
+                else: (next 3 lines were indented)
+                """
+                lower_search = self.search(depth - 1, position, alpha, beta, parent_moves + [move])
+                eval = lower_search.evaluation
+                path = lower_search.path
                 
                 if state.is_players_turn:
                     if eval > best_eval:
