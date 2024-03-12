@@ -187,6 +187,25 @@ class Move:
         self.evaluation = evaluation
         self.path = path
     
+    def gui_string(self):
+        match self.move_type:
+            case ValidMoves.SHOOT_DEALER:
+                move = "Shoot Dealer"
+            case ValidMoves.SHOOT_PLAYER:
+                move = "Shoot Player"
+            case ValidMoves.USE_BEER:
+                move = "Drink Beer"
+            case ValidMoves.USE_CIGARETTES:
+                move = "Smoke Cigarettes"
+            case ValidMoves.USE_HAND_SAW:
+                move = "Use Hand Saw"
+            case ValidMoves.USE_HANDCUFFS:
+                move = "Use Handcuffs"
+            case ValidMoves.USE_MAGNIFYING_GLASS:
+                move = "Use Magnifying Glass"
+        
+        return f"Best Move: {move}\nEvaluation: {float(self.evaluation)*100:.2f}\nPath: {', '.join(convert_move_list(self.path))}"
+    
     def __str__(self):
         if self.move_type == None: return f"Evaluation: {float(self.evaluation)}"
         return f"Move ({self.move_type}, Chance dealer kills player: {float(self.evaluation)*100:.2f}%)\nPath: {', '.join(convert_move_list(self.path))}"
