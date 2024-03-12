@@ -345,12 +345,12 @@ class BackshotRoulette:
             health_difference = Fraction(state.player_health, state.dealer_health + state.player_health)
             return Move(None, chance_player_lives * health_difference * state.probabilty)
 
-        all_moves = self.get_ordered_moves(state)
-        
-        # Force play any obvious moves. Explained in the comments of the function.
+        # Force play any obvious moves, otherwise search all moves ordered by predicted evaluation.
         obvious_move = obvious_move_exists(state)
         if obvious_move != None:
             all_moves = [obvious_move]
+        else:
+            all_moves = self.get_ordered_moves(state)
         
         best_move = ValidMoves.SHOOT_PLAYER if state.is_players_turn else ValidMoves.SHOOT_DEALER
         best_eval = -INF if state.is_players_turn else INF
