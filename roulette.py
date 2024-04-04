@@ -1,6 +1,7 @@
 from enum import *
 from fractions import Fraction
 from copy import deepcopy
+from typing import Literal
 
 INF = 1000000
 
@@ -28,6 +29,36 @@ class Items(Enum):
     EXPIRED_MEDICINE = 7
     BURNER_PHONE = 8
 
+class LoadedShells:
+    def __init__(self, *shells):
+        self.shells: list[Literal["live", "blank"] | None] = list(shells)
+        self.populate()
+    
+    def populate(self):
+        """
+        Ensures `len(self.shells) == 8` by filling blanks with `None`.
+        """
+        self.shells += [None] * (8 - len(self.shells))
+    
+    def get_current_shell(self):
+        """
+        Returns the first shell, the currently loaded shell.
+        """
+        return self.shells[0]
+    
+    def set_shell(self, index: int, shell: Literal["live", "blank"] | None = None):
+        self.populate()
+        if index >= 8: raise KeyError("The gun can only have 8 shells at once.")
+        self.shells[index] = shell
+    
+    def shoot(self):
+        """
+        Removes and returns the currently loaded shell.
+        """
+        shot_shell = self.shells.pop(0)
+        self.populate()
+        return shot_shell
+
 class InvalidMoveError(Exception):
     pass
 
@@ -51,7 +82,7 @@ class BuckshotRouletteMove:
         self.is_players_turn = is_players_turn
         self.handcuffed = 0 # 0 represents no handcuffs, 1 means handcuffs are on but will go next turn, 2 means handcuffs are on and will skip next turn
         self.gun_is_sawed = False
-        self.known_shells = [None] * 8
+        self.known_shells = LoadedShells()
         self.on_adrenaline = False
         
         self.max_health = max_health
