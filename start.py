@@ -19,6 +19,14 @@ def string_to_item(item_string: str):
                 items += [Items.BEER]
             case "m":
                 items += [Items.MAGNIFYING_GLASS]
+            case "a":
+                items += [Items.ADRENALINE]
+            case "e":
+                items += [Items.EXPIRED_MEDICINE]
+            case "f":
+                items += [Items.BURNER_PHONE]
+            case "i":
+                items += [Items.INVERTER]
     
     return items
 
@@ -61,7 +69,7 @@ position = BuckshotRouletteMove(is_players_turn,
                                 dealer_items,
                                 player_items)
 
-position.current_shell = current_shell
+position.loaded_shells.set_shell(0, current_shell)
 position.handcuffed = handcuffed
 position.gun_is_sawed = sawed
 

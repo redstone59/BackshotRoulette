@@ -17,6 +17,14 @@ def convert_move_list(move_list: list[ValidMoves]):
                 resultant += ["handcuff"]
             case ValidMoves.USE_MAGNIFYING_GLASS:
                 resultant += ["glass"]
+            case ValidMoves.USE_ADRENALINE:
+                resultant += ["adrenaline"]
+            case ValidMoves.USE_BURNER_PHONE:
+                resultant += ["phone"]
+            case ValidMoves.USE_EXPIRED_MEDICINE:
+                resultant += ["medicine"]
+            case ValidMoves.USE_INVERTER:
+                resultant += ["inverter"]
             case ValidMoves.SHOOT_DEALER:
                 resultant += ["dealer"]
             case ValidMoves.SHOOT_PLAYER:
@@ -132,53 +140,17 @@ def items_to_string(item_list: list[Items]):
                 resultant += ["b"]
             case Items.MAGNIFYING_GLASS:
                 resultant += ["m"]
+            case Items.ADRENALINE:
+                resultant += ["a"]
+            case Items.EXPIRED_MEDICINE:
+                resultant += ["e"]
+            case Items.BURNER_PHONE:
+                resultant += ["f"] # ew.
+            case Items.INVERTER:
+                resultant += ["i"]
     
     resultant.sort()
     return "".join(resultant)
-
-def state_to_key(state: BuckshotRouletteMove):
-    """
-    Turns a given `BuckshotRouletteMove` into a key for the transposition table.
-
-    Args:
-        state (BuckshotRouletteMove): The position to convert.
-
-    Returns:
-        tuple: Transposition table key.
-    """
-
-    #
-    # position key (should be) a 17 bit number
-    # lllbbbPhhsccdddppp
-    #
-    # l, b -> live and blank shells
-    # P, h, s, c -> is_players_turn, handcuffed?, sawed gun?, current shell 
-    # d, p -> dealer, player health
-    #
-
-    key = state.live_shells
-    key <<= 3
-    key += state.blank_shells
-    key <<= 3
-    key += state.is_players_turn
-    key <<= 1
-    key += state.handcuffed
-    key <<= 2
-    key += state.gun_is_sawed
-    key <<= 1
-    match state.get_current_shell():
-        case None:
-            key += 0b00
-        case "live":
-            key += 0b01
-        case "blank":
-            key += 0b10
-    key <<= 2
-    key += state.dealer_health
-    key <<= 3
-    key += state.player_health
-
-    return key, items_to_string(state.dealer_items), items_to_string(state.player_items)
 
 def shots_taken(move_list: list[ValidMoves]):
     shots = move_list.count(ValidMoves.SHOOT_DEALER)
@@ -207,6 +179,14 @@ class Move:
                 move = "Use Handcuffs"
             case ValidMoves.USE_MAGNIFYING_GLASS:
                 move = "Use Magnifying Glass"
+            case ValidMoves.USE_ADRENALINE:
+                move = "Use Adrenaline"
+            case ValidMoves.USE_BURNER_PHONE:
+                move = "Use Burner Phone"
+            case ValidMoves.USE_EXPIRED_MEDICINE:
+                move = "Use Expired Medicine"
+            case ValidMoves.USE_INVERTER:
+                move = "Use Inverter"
         
         return f"Best Move: {move}\nEvaluation: {float(self.evaluation)*100:.2f}\nPath: {', '.join(convert_move_list(self.path))}"
     
@@ -361,10 +341,10 @@ class BackshotRoulette:
         
         return sorted_moves
     
-    def search(self, depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []) -> Move:
-        if self.verbose: print(f"Starting search with depth {depth} on moves {', '.join(convert_move_list(parent_moves))}")
+    def search(self, move_depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []) -> Move:
+        if self.verbose: print(f"Starting search with move_depth {move_depth} on moves {', '.join(convert_move_list(parent_moves))}")
         
-        if 0 in [depth, state.player_health, state.dealer_health, state.live_shells]:
+        if 0 in [move_depth, state.player_health, state.dealer_health, state.live_shells]:
             chance_player_lives = 1 - self.evaluate_position(state)
             health_difference = Fraction(state.player_health, state.dealer_health + state.player_health)
             return Move(None, chance_player_lives * health_difference * state.probabilty)
@@ -395,14 +375,19 @@ class BackshotRoulette:
                 transposition_key = state, move
                 current_turn = self.max_depth - shots_taken(parent_moves)
                 
-                if self.transposition_table[transposition_key] != None and self.transposition_table[transposition_key].depth == current_turn:
+                if self.transposition_table[transposition_key] != None and self.transposition_table[transposition_key].move_depth == current_turn:
                     print("transposition accessed")
                     eval = self.transposition_table[transposition_key].evaluation
                     eval *= position.probabilty
                     path = []
                 else: (next 3 lines were indented)
                 """
-                lower_search = self.search(depth - 1, position, alpha, beta, parent_moves + [move])
+                # Decrement depth on each shot.
+                next_depth = move_depth
+                if move in [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]:
+                    next_depth -= 1
+                
+                lower_search = self.search(next_depth, position, alpha, beta, parent_moves + [move])
                 eval = lower_search.evaluation
                 path = lower_search.path
                 

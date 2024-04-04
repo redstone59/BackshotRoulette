@@ -114,10 +114,11 @@ class BuckshotRouletteMove:
         if Items.INVERTER in current_items: all_moves += [ValidMoves.USE_INVERTER]
         if Items.MAGNIFYING_GLASS in current_items: all_moves += [ValidMoves.USE_MAGNIFYING_GLASS]
         
-        if self.is_players_turn:
-            all_moves += [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]
-        else:
-            all_moves += [ValidMoves.SHOOT_PLAYER, ValidMoves.SHOOT_DEALER]
+        if not self.on_adrenaline:    
+            if self.is_players_turn:
+                all_moves += [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]
+            else:
+                all_moves += [ValidMoves.SHOOT_PLAYER, ValidMoves.SHOOT_DEALER]
         
         return all_moves
     
@@ -316,6 +317,8 @@ class BuckshotRouletteMove:
             next_move.player_items.remove(item)
         else:
             next_move.dealer_items.remove(item)
+        
+        next_move.on_adrenaline = False
     
     def __str__(self):
         return f"""Buckshot Roulette Move

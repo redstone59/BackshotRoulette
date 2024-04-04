@@ -29,6 +29,14 @@ def string_to_item(item_string: str):
                 items += [Items.BEER]
             case "m":
                 items += [Items.MAGNIFYING_GLASS]
+            case "a":
+                items += [Items.ADRENALINE]
+            case "e":
+                items += [Items.EXPIRED_MEDICINE]
+            case "f":
+                items += [Items.BURNER_PHONE]
+            case "i":
+                items += [Items.INVERTER]
     
     return items
 
