@@ -12,6 +12,10 @@ class ValidMoves(Enum):
     USE_CIGARETTES = 4
     USE_BEER = 5
     USE_MAGNIFYING_GLASS = 6
+    USE_ADRENALINE = 7
+    USE_INVERTER = 8
+    USE_EXPIRED_MEDICINE = 9
+    USE_BURNER_PHONE = 10
 
 class Items(Enum):
     HANDCUFFS = 0
@@ -19,6 +23,10 @@ class Items(Enum):
     CIGARETTES = 2
     BEER = 3
     MAGNIFYING_GLASS = 4
+    ADRENALINE = 5
+    INVERTER = 6
+    EXPIRED_MEDICINE = 7
+    BURNER_PHONE = 8
 
 class InvalidMoveError(Exception):
     pass
@@ -98,13 +106,12 @@ class BuckshotRouletteMove:
                 live_move.current_shell = None
                 live_move.gun_is_sawed = False
                 
-                if self.handcuffed == 2: # If handcuffed are newly applied, skip the turn
-                    live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots dealer with a live, it is not the players turn. If the dealer shoots themself with a live, it is the players turn.
-                
                 if self.handcuffed > 0: # Decrement turns left until next handcuff
                     live_move.handcuffed -= 1
                     blank_move.handcuffed -= 1
-
+                else:
+                    live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots dealer with a live, it is not the players turn. If the dealer shoots themself with a live, it is the players turn.
+                
                 blank_move.current_shell = None
                 blank_move.is_players_turn = False # If the player shoots the dealer with a blank, it is not the players turn. If the dealer shoots themself with a blank, it is not the players turn.
                 blank_move.gun_is_sawed = False
@@ -117,12 +124,11 @@ class BuckshotRouletteMove:
                 live_move.current_shell = None
                 live_move.gun_is_sawed = False
                 
-                if self.handcuffed == 2: # If handcuffed are newly applied, skip the turn
-                    live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots themself with a live, it is not the players turn. If the dealer shoots the player with a live, it is the players turn.
-                
                 if self.handcuffed > 0: # Decrement turns left until next handcuff
                     live_move.handcuffed -= 1
                     blank_move.handcuffed -= 1
+                else:
+                    live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots themself with a live, it is not the players turn. If the dealer shoots the player with a live, it is the players turn.
                 
                 blank_move.current_shell = None
                 blank_move.is_players_turn = True # If the player shoots themself with a blank, it is the players turn. If the dealer shoots the player with a blank, it is the players turn.
