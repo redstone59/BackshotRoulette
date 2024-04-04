@@ -60,10 +60,8 @@ def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
             if 0 in [state.live_shells, state.blank_shells]: return True
         
         case ValidMoves.USE_CIGARETTES:
-            if state.is_players_turn and state.player_health == state.max_health:
-                return True
-            elif (not state.is_players_turn) and state.dealer_health == state.max_health:
-                return True
+            other_players_health = state.dealer_health if state.is_players_turn else state.player_health
+            if other_players_health == state.max_health: return True
         
         case ValidMoves.USE_HAND_SAW:
             if state.live_shells == 0: return True
@@ -88,6 +86,7 @@ def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
         case ValidMoves.USE_EXPIRED_MEDICINE:
             current_players_health = state.player_health if state.is_players_turn else state.dealer_health
             current_players_items = state.player_items if state.is_players_turn else state.dealer_items
+            
             if Items.CIGARETTES in current_players_items and current_players_health == state.max_health - 1: return True
             if current_players_health == state.max_health: return True
         
