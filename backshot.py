@@ -29,6 +29,7 @@ def convert_move_list(move_list: list[ValidMoves]):
                 resultant += ["dealer"]
             case ValidMoves.SHOOT_PLAYER:
                 resultant += ["player"]
+            
     return resultant
 
 def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
@@ -75,6 +76,23 @@ def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
         case ValidMoves.USE_MAGNIFYING_GLASS:
             if state.get_current_shell() != None: return True
             if state.live_shells == 0 or state.blank_shells == 0: return True
+        
+        case ValidMoves.USE_ADRENALINE:
+            other_players_items = state.dealer_items if state.is_players_turn else state.player_items
+            if other_players_items == []: return True
+        
+        case ValidMoves.USE_BURNER_PHONE: # Could | with ValidMoves.USE_BEER
+            if state.get_current_shell() != None: return True
+            if 0 in [state.live_shells, state.blank_shells]: return True
+        
+        case ValidMoves.USE_EXPIRED_MEDICINE:
+            current_players_health = state.player_health if state.is_players_turn else state.dealer_health
+            current_players_items = state.player_items if state.is_players_turn else state.dealer_items
+            if Items.CIGARETTES in current_players_items and current_players_health == state.max_health - 1: return True
+            if current_players_health == state.max_health: return True
+        
+        case ValidMoves.USE_INVERTER:
+            pass
     
     return False
 
