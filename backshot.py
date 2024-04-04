@@ -46,54 +46,66 @@ def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
     
     match move:
         case ValidMoves.SHOOT_DEALER:
-            if (not state.is_players_turn) and (state.gun_is_sawed or state.live_shells >= state.blank_shells): return True
-            if state.is_players_turn and state.get_current_shell() == "blank": return True
-            if (not state.is_players_turn) and state.get_current_shell() == "live": return True
+            sawed_gun_with_dealer = not state.is_players_turn and state.gun_is_sawed
+            blank_shell_with_player = state.is_players_turn and state.get_current_shell() == "blank"
+            live_shell_with_dealer = not state.is_players_turn and state.get_current_shell() == "live"
+            
+            return sawed_gun_with_dealer or blank_shell_with_player or live_shell_with_dealer
         
         case ValidMoves.SHOOT_PLAYER:
-            if state.is_players_turn and (state.gun_is_sawed or state.live_shells >= state.blank_shells): return True
-            if (not state.is_players_turn) and state.get_current_shell() == "blank": return True
-            if state.is_players_turn and state.get_current_shell() == "live": return True
+            sawed_gun_with_player = state.is_players_turn and state.gun_is_sawed
+            blank_shell_with_dealer = not state.is_players_turn and state.get_current_shell() == "blank"
+            live_shell_with_player = state.is_players_turn and state.get_current_shell() == "live"
+            
+            return sawed_gun_with_player or blank_shell_with_dealer, live_shell_with_player
 
         case ValidMoves.USE_BEER:
-            if state.get_current_shell() != None: return True
-            if 0 in [state.live_shells, state.blank_shells]: return True
+            known_shell = state.get_current_shell() != None
+            all_one_type_of_shell = 0 in [state.unknown_live_shells, state.unknown_blank_shells]
+            
+            return known_shell or all_one_type_of_shell
         
         case ValidMoves.USE_CIGARETTES:
             other_players_health = state.dealer_health if state.is_players_turn else state.player_health
-            if other_players_health == state.max_health: return True
+            
+            return other_players_health == state.max_health
         
         case ValidMoves.USE_HAND_SAW:
-            if state.live_shells == 0: return True
-            if state.is_players_turn and state.dealer_health == 1: return True
-            elif (not state.is_players_turn) and state.player_health == 1: return True
+            no_live_shells = state.unknown_live_shells == 0
+            other_players_health = state.dealer_health if state.is_players_turn else state.player_health
+            
+            return no_live_shells or other_players_health == 1
         
         case ValidMoves.USE_HANDCUFFS:
-            if state.handcuffed > 0: return True
+            return state.handcuffed > 0
         
         case ValidMoves.USE_MAGNIFYING_GLASS:
-            if state.get_current_shell() != None: return True
-            if state.live_shells == 0 or state.blank_shells == 0: return True
+            known_shell = state.get_current_shell() != None
+            all_one_type_of_shell = 0 in [state.unknown_live_shells, state.unknown_blank_shells]
+            
+            return known_shell or all_one_type_of_shell
         
         case ValidMoves.USE_ADRENALINE:
             other_players_items = state.dealer_items if state.is_players_turn else state.player_items
             if other_players_items == []: return True
         
         case ValidMoves.USE_BURNER_PHONE: # Could | with ValidMoves.USE_BEER
-            if state.get_current_shell() != None: return True
-            if 0 in [state.live_shells, state.blank_shells]: return True
+            known_shell = state.get_current_shell() != None
+            all_one_type_of_shell = 0 in [state.unknown_live_shells, state.unknown_blank_shells]
+            
+            return known_shell or all_one_type_of_shell
         
         case ValidMoves.USE_EXPIRED_MEDICINE:
             current_players_health = state.player_health if state.is_players_turn else state.dealer_health
             current_players_items = state.player_items if state.is_players_turn else state.dealer_items
             
-            if Items.CIGARETTES in current_players_items and current_players_health == state.max_health - 1: return True
-            if current_players_health == state.max_health: return True
+            has_cigarettes = Items.CIGARETTES in current_players_items and current_players_health == state.max_health - 1
+            at_max_health = current_players_health == state.max_health
+            
+            return at_max_health or (has_cigarettes and current_players_health - state.max_health <= 1)
         
         case ValidMoves.USE_INVERTER:
-            pass
-    
-    return False
+            return state.get_current_shell() == "live"
 
 def obvious_move_exists(state: BuckshotRouletteMove):
     if state.is_players_turn:
@@ -109,7 +121,7 @@ def obvious_move_exists(state: BuckshotRouletteMove):
     
     # Force shooting other player if the known shell is live and the other player has more than 1 health.
     other_players_health = state.dealer_health if state.is_players_turn else state.dealer_health
-    is_definitely_live = state.get_current_shell() == "live" or state.blank_shells == 0
+    is_definitely_live = state.get_current_shell() == "live" or state.unknown_blank_shells == 0
     can_use_hand_saw = not state.gun_is_sawed and Items.HAND_SAW in current_items
     
     if is_definitely_live:
@@ -119,7 +131,7 @@ def obvious_move_exists(state: BuckshotRouletteMove):
             return shoot_other_player
     
     # Force shooting self if the known shell is blank.
-    is_definitely_blank = state.get_current_shell() == "blank" or state.live_shells == 0
+    is_definitely_blank = state.get_current_shell() == "blank" or state.unknown_live_shells == 0
     
     if is_definitely_blank:
         return shoot_self
@@ -127,7 +139,7 @@ def obvious_move_exists(state: BuckshotRouletteMove):
     # Force magnifying glass usage if the shell isn't known.
     has_magnifying_glass = Items.MAGNIFYING_GLASS in current_items
     unknown_shell = state.get_current_shell() == None
-    one_of_each_shell = 0 not in [state.live_shells, state.blank_shells]
+    one_of_each_shell = 0 not in [state.unknown_live_shells, state.unknown_blank_shells]
     
     if has_magnifying_glass and unknown_shell and one_of_each_shell:
         return ValidMoves.USE_MAGNIFYING_GLASS
@@ -137,7 +149,7 @@ def obvious_move_exists(state: BuckshotRouletteMove):
         return ValidMoves.USE_CIGARETTES
     
     # Force handcuff usage if there's at least one blank shell left. (Force a guaranteed shot. Or two.)
-    if Items.HANDCUFFS in current_items and state.blank_shells <= 1:
+    if Items.HANDCUFFS in current_items and state.unknown_blank_shells <= 1:
         return ValidMoves.USE_HANDCUFFS
     
     return None
@@ -229,7 +241,7 @@ class BackshotRoulette:
         if state.player_health == 0: state_eval = -INF
         elif state.dealer_health == 0: state_eval = INF
         
-        if state.live_shells + state.blank_shells != 0:
+        if state.unknown_live_shells + state.unknown_blank_shells != 0:
             state_eval += known_shell_bonus(move, state)
             state_eval += shoot_other_person_bonus(move, state)
         
@@ -256,9 +268,9 @@ class BackshotRoulette:
             # = 1/2((L+L-1)/(L+B-1))
             # = (2L-1)/(2*(L+B-1))
             
-            denominator = state.live_shells + state.blank_shells - 1
+            denominator = state.unknown_live_shells + state.unknown_blank_shells - 1
             if denominator > 0:
-                shoot_dealer_eval = Fraction(2 * state.live_shells - 1, 2 * denominator)
+                shoot_dealer_eval = Fraction(2 * state.unknown_live_shells - 1, 2 * denominator)
             else:
                 shoot_dealer_eval = Fraction(1, 1)
             
@@ -268,15 +280,15 @@ class BackshotRoulette:
             
             shoot_self_eval = Fraction(1, 1)
             
-            for n in range(1, state.blank_shells):
-                denominator = state.live_shells + state.blank_shells - n
+            for n in range(1, state.unknown_blank_shells):
+                denominator = state.unknown_live_shells + state.unknown_blank_shells - n
                 
                 if denominator > 0:
-                    shoot_self_eval += Fraction(state.live_shells - 1, denominator)
+                    shoot_self_eval += Fraction(state.unknown_live_shells - 1, denominator)
                 else:
                     shoot_dealer_eval += Fraction(1, 1)
             
-            shoot_self_eval *= Fraction(1, state.blank_shells) if state.blank_shells > 0 else Fraction(1, 1)
+            shoot_self_eval *= Fraction(1, state.unknown_blank_shells) if state.unknown_blank_shells > 0 else Fraction(1, 1)
             
             # Using a beer can lead to four outcomes.
             # 
@@ -294,21 +306,21 @@ class BackshotRoulette:
             # (4L-3)/(4(L+B-2))
             
             if ValidMoves.USE_BEER in state.get_all_moves():
-                denominator = state.live_shells + state.blank_shells - 2
+                denominator = state.unknown_live_shells + state.unknown_blank_shells - 2
                 if denominator > 0:
-                    use_beer_eval = Fraction(4 * state.live_shells - 3, 4 * denominator)
+                    use_beer_eval = Fraction(4 * state.unknown_live_shells - 3, 4 * denominator)
                 else:
                     use_beer_eval = Fraction(1, 1)
             else:
-                if state.blank_shells > 0:
-                    use_beer_eval = Fraction(state.live_shells, state.live_shells + state.blank_shells)
+                if state.unknown_blank_shells > 0:
+                    use_beer_eval = Fraction(state.unknown_live_shells, state.unknown_live_shells + state.unknown_blank_shells)
                 else:
                     use_beer_eval = Fraction(1, 1)
             
             return min(shoot_dealer_eval, shoot_self_eval, use_beer_eval)
         
-        if state.blank_shells > 0:
-            dealer_kill_probability = Fraction(state.live_shells, state.live_shells + state.blank_shells)
+        if state.unknown_blank_shells > 0:
+            dealer_kill_probability = Fraction(state.unknown_live_shells, state.unknown_live_shells + state.unknown_blank_shells)
         else:
             dealer_kill_probability = Fraction(1, 1)
         
@@ -361,7 +373,7 @@ class BackshotRoulette:
     def search(self, move_depth: int, state: BuckshotRouletteMove, alpha = -INF, beta = INF, parent_moves = []) -> Move:
         if self.verbose: print(f"Starting search with move_depth {move_depth} on moves {', '.join(convert_move_list(parent_moves))}")
         
-        if 0 in [move_depth, state.player_health, state.dealer_health, state.live_shells]:
+        if 0 in [move_depth, state.player_health, state.dealer_health, state.unknown_live_shells]:
             chance_player_lives = 1 - self.evaluate_position(state)
             health_difference = Fraction(state.player_health, state.dealer_health + state.player_health)
             return Move(None, chance_player_lives * health_difference * state.probabilty)

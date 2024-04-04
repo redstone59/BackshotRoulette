@@ -68,16 +68,16 @@ class BuckshotRouletteMove:
                  max_health: int, 
                  dealer_health: int, 
                  player_health: int, 
-                 live_shells: int, 
-                 blank_shells: int, 
+                 unknown_live_shells: int, 
+                 unknown_blank_shells: int, 
                  dealer_items: list, 
                  player_items: list
                  ):
         
         self.probabilty = Fraction(1, 1)
         
-        self.live_shells = live_shells
-        self.blank_shells = blank_shells
+        self.unknown_live_shells = unknown_live_shells
+        self.unknown_blank_shells = unknown_blank_shells
         self.loaded_shells = LoadedShells()
         
         self.is_players_turn = is_players_turn
@@ -125,22 +125,22 @@ class BuckshotRouletteMove:
     def generate_live_and_blank_moves(self):
         next_move = deepcopy(self)
         
-        if self.live_shells + self.blank_shells == 0:
+        if self.unknown_live_shells + self.unknown_blank_shells == 0:
             live_probability = Fraction(0, 1)
         elif self.get_current_shell() == "live":
             live_probability = Fraction(1, 1)
         else:
-            live_probability = Fraction(self.live_shells, self.live_shells + self.blank_shells)
+            live_probability = Fraction(self.unknown_live_shells, self.unknown_live_shells + self.unknown_blank_shells)
             
         blank_probability = 1 - live_probability # Since live_probability + blank_probability must equal 1
         
         live_move = deepcopy(self)
         live_move.probabilty *= live_probability
-        live_move.live_shells = max(0, live_move.live_shells - 1)
+        live_move.unknown_live_shells = max(0, live_move.unknown_live_shells - 1)
         
         blank_move = deepcopy(self)
         blank_move.probabilty *= blank_probability
-        blank_move.blank_shells = max(0, blank_move.blank_shells - 1)
+        blank_move.unknown_blank_shells = max(0, blank_move.unknown_blank_shells - 1)
         
         return next_move, live_move, blank_move
     
@@ -247,7 +247,7 @@ class BuckshotRouletteMove:
                 return next_move,
             
             case ValidMoves.USE_BURNER_PHONE:
-                total_shells = self.live_shells + self.blank_shells
+                total_shells = self.unknown_live_shells + self.unknown_blank_shells
                 possible_outcomes = []
                 
                 for i in range(0, total_shells):
@@ -281,10 +281,10 @@ class BuckshotRouletteMove:
                 bad_move = blank_move
                 bad_move.probabilty = self.probabilty * Fraction(3, 5)
                 if self.is_players_turn:
-                    # bad thing here
+                    heal_move.player_health -= 1
                     bad_move.player_health = min(0, bad_move.player_health)
                 else:
-                    # bad thing here
+                    heal_move.dealer_health -= 1
                     bad_move.dealer_health = min(0, bad_move.dealer_health)
                 
                 self.remove_item(heal_move, Items.EXPIRED_MEDICINE)
@@ -293,7 +293,6 @@ class BuckshotRouletteMove:
                 return heal_move, bad_move
             
             case ValidMoves.USE_INVERTER:
-                # I don't even know what this does. I assume it's like this.
                 if self.inverter_on: return None
 
                 next_move.inverter_on = True
@@ -307,10 +306,10 @@ class BuckshotRouletteMove:
         # 
         #  is_players_turn | on_adrenaline | items getting removed |
         # -----------------+---------------+-----------------------+
-        #                0 |             0 | dealer                |
-        #                0 |             1 | player                |
-        #                1 |             0 | player                |
-        #                1 |             1 | dealer                |
+        #            false |         false | dealer                |
+        #            false |          true | player                |
+        #             true |         false | player                |
+        #             true |          true | dealer                |
         # -----------------+---------------+-----------------------+
         
         if self.is_players_turn != self.on_adrenaline:
@@ -326,8 +325,8 @@ class BuckshotRouletteMove:
 Turn: {"Player" if self.is_players_turn else "Dealer"}
 Turn probability: {self.probabilty}
 
-Number of live shells: {self.live_shells}
-Number of blank shells: {self.blank_shells}
+Number of live shells: {self.unknown_live_shells}
+Number of blank shells: {self.unknown_blank_shells}
 
 Handcuffed? {"Yes" if self.handcuffed else "No"}
 Sawed gun? {"Yes" if self.gun_is_sawed else "No"}
