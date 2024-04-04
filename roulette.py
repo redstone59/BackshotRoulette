@@ -51,7 +51,8 @@ class BuckshotRouletteMove:
         self.is_players_turn = is_players_turn
         self.handcuffed = 0 # 0 represents no handcuffs, 1 means handcuffs are on but will go next turn, 2 means handcuffs are on and will skip next turn
         self.gun_is_sawed = False
-        self.current_shell = None
+        self.known_shells = [None] * 8
+        self.on_adrenaline = False
         
         self.max_health = max_health
         self.dealer_health = dealer_health
@@ -60,15 +61,26 @@ class BuckshotRouletteMove:
         self.dealer_items = dealer_items
         self.player_items = player_items
     
+    def current_shell(self):
+        return self.known_shells[0]
+    
     def get_all_moves(self):
         all_moves = []
-        current_items = self.player_items if self.is_players_turn else self.dealer_items
         
-        if Items.MAGNIFYING_GLASS in current_items: all_moves += [ValidMoves.USE_MAGNIFYING_GLASS]
-        if Items.HAND_SAW in current_items and self.gun_is_sawed == False: all_moves += [ValidMoves.USE_HAND_SAW]
-        if Items.HANDCUFFS in current_items and self.handcuffed == 0: all_moves += [ValidMoves.USE_HANDCUFFS]
-        if Items.CIGARETTES in current_items: all_moves += [ValidMoves.USE_CIGARETTES]
+        if not self.on_adrenaline:
+            current_items = self.player_items if self.is_players_turn else self.dealer_items
+        else:
+            current_items = self.player_items if not self.is_players_turn else self.dealer_items
+        
+        if Items.ADRENALINE in current_items: all_moves += [ValidMoves.USE_ADRENALINE]
         if Items.BEER in current_items: all_moves += [ValidMoves.USE_BEER]
+        if Items.BURNER_PHONE in current_items: all_moves += [ValidMoves.USE_BURNER_PHONE]
+        if Items.CIGARETTES in current_items: all_moves += [ValidMoves.USE_CIGARETTES]
+        if Items.EXPIRED_MEDICINE in current_items: all_moves += [ValidMoves.USE_EXPIRED_MEDICINE]
+        if Items.HANDCUFFS in current_items and self.handcuffed == 0: all_moves += [ValidMoves.USE_HANDCUFFS]
+        if Items.HAND_SAW in current_items and self.gun_is_sawed == False: all_moves += [ValidMoves.USE_HAND_SAW]
+        if Items.INVERTER in current_items: all_moves += [ValidMoves.USE_INVERTER]
+        if Items.MAGNIFYING_GLASS in current_items: all_moves += [ValidMoves.USE_MAGNIFYING_GLASS]
         
         if self.is_players_turn:
             all_moves += [ValidMoves.SHOOT_DEALER, ValidMoves.SHOOT_PLAYER]
