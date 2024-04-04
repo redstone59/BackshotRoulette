@@ -82,7 +82,7 @@ class BuckshotRouletteMove:
         self.is_players_turn = is_players_turn
         self.handcuffed = 0 # 0 represents no handcuffs, 1 means handcuffs are on but will go next turn, 2 means handcuffs are on and will skip next turn
         self.gun_is_sawed = False
-        self.known_shells = LoadedShells()
+        self.loaded_shells = LoadedShells()
         self.on_adrenaline = False
         
         self.max_health = max_health
@@ -92,8 +92,8 @@ class BuckshotRouletteMove:
         self.dealer_items = dealer_items
         self.player_items = player_items
     
-    def current_shell(self):
-        return self.known_shells[0]
+    def get_current_shell(self):
+        return self.loaded_shells.get_current_shell()
     
     def get_all_moves(self):
         all_moves = []
@@ -129,6 +129,8 @@ class BuckshotRouletteMove:
         
         if self.live_shells + self.blank_shells == 0:
             live_probability = Fraction(0, 1)
+        elif self.get_current_shell() == "live":
+            live_probability = Fraction(1, 1)
         else:
             live_probability = Fraction(self.live_shells, self.live_shells + self.blank_shells)
             
@@ -146,7 +148,7 @@ class BuckshotRouletteMove:
             case ValidMoves.SHOOT_DEALER:
                 live_move.dealer_health -= 1 if not self.gun_is_sawed else 2
                 live_move.dealer_health = max(0, live_move.dealer_health)
-                live_move.current_shell = None
+                live_move.loaded_shells.shoot()
                 live_move.gun_is_sawed = False
                 
                 if self.handcuffed > 0: # Decrement turns left until next handcuff
@@ -155,7 +157,7 @@ class BuckshotRouletteMove:
                 else:
                     live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots dealer with a live, it is not the players turn. If the dealer shoots themself with a live, it is the players turn.
                 
-                blank_move.current_shell = None
+                blank_move.loaded_shells.shoot()
                 blank_move.is_players_turn = False # If the player shoots the dealer with a blank, it is not the players turn. If the dealer shoots themself with a blank, it is not the players turn.
                 blank_move.gun_is_sawed = False
                 
@@ -164,7 +166,7 @@ class BuckshotRouletteMove:
             case ValidMoves.SHOOT_PLAYER:
                 live_move.player_health -= 1 if not self.gun_is_sawed else 2
                 live_move.player_health = max(0, live_move.player_health)
-                live_move.current_shell = None
+                live_move.loaded_shells.shoot()
                 live_move.gun_is_sawed = False
                 
                 if self.handcuffed > 0: # Decrement turns left until next handcuff
@@ -173,55 +175,46 @@ class BuckshotRouletteMove:
                 else:
                     live_move.is_players_turn = False if self.is_players_turn else True # If the player shoots themself with a live, it is not the players turn. If the dealer shoots the player with a live, it is the players turn.
                 
-                blank_move.current_shell = None
+                blank_move.loaded_shells.shoot()
                 blank_move.is_players_turn = True # If the player shoots themself with a blank, it is the players turn. If the dealer shoots the player with a blank, it is the players turn.
                 blank_move.gun_is_sawed = False
 
                 return live_move, blank_move
                 
             case ValidMoves.USE_BEER:
-                live_move.current_shell = None
-                blank_move.current_shell = None
+                live_move.loaded_shells.shoot()
+                blank_move.loaded_shells.shoot()
                 
-                if self.is_players_turn:
-                    live_move.player_items.remove(Items.BEER)
-                    blank_move.player_items.remove(Items.BEER)
-                else:
-                    live_move.dealer_items.remove(Items.BEER)
-                    blank_move.dealer_items.remove(Items.BEER)
+                self.remove_item(live_move, Items.MAGNIFYING_GLASS)
+                self.remove_item(blank_move, Items.MAGNIFYING_GLASS)
                 
                 return live_move, blank_move
             
             case ValidMoves.USE_MAGNIFYING_GLASS:
-                live_move.current_shell = "live"
-                blank_move.current_shell = "blank"
+                live_move.loaded_shells.set_shell(0, "live")
+                blank_move.loaded_shells.set_shell(0, "blank")
                 
-                if self.is_players_turn:
-                    live_move.player_items.remove(Items.MAGNIFYING_GLASS)
-                    blank_move.player_items.remove(Items.MAGNIFYING_GLASS)
-                else:
-                    live_move.dealer_items.remove(Items.MAGNIFYING_GLASS)
-                    blank_move.dealer_items.remove(Items.MAGNIFYING_GLASS)
+                self.remove_item(live_move, Items.MAGNIFYING_GLASS)
+                self.remove_item(blank_move, Items.MAGNIFYING_GLASS)
                 
                 return live_move, blank_move
             
             case ValidMoves.USE_CIGARETTES:
                 if self.is_players_turn:
-                    next_move.player_health += 1 if next_move.player_health != next_move.max_health else 0
-                    next_move.player_items.remove(Items.CIGARETTES)
+                    next_move.player_health += 1
+                    next_move.player_health = max(self.max_health, next_move.player_health)
                 else:
-                    next_move.dealer_health += 1 if next_move.player_health != next_move.max_health else 0
-                    next_move.dealer_items.remove(Items.CIGARETTES)
+                    next_move.dealer_health += 1
+                    next_move.dealer_health = max(self.max_health, next_move.dealer_health)
+                
+                self.remove_item(next_move, Items.CIGARETTES)
                 
                 return next_move,
             
             case ValidMoves.USE_HANDCUFFS:
                 if self.handcuffed: return None
                 
-                if self.is_players_turn:
-                    next_move.player_items.remove(Items.HANDCUFFS)
-                else:
-                    next_move.dealer_items.remove(Items.HANDCUFFS)
+                self.remove_item(next_move, Items.HANDCUFFS)
                 
                 next_move.handcuffed = 2
                 
@@ -230,14 +223,40 @@ class BuckshotRouletteMove:
             case ValidMoves.USE_HAND_SAW:
                 if self.gun_is_sawed: return None
                 
-                if self.is_players_turn:
-                    next_move.player_items.remove(Items.HAND_SAW)
-                else:
-                    next_move.dealer_items.remove(Items.HAND_SAW)
+                self.remove_item(next_move, Items.HAND_SAW)
                 
                 next_move.gun_is_sawed = True
                 
                 return next_move,
+
+            case ValidMoves.USE_ADRENALINE:
+                pass
+            
+            case ValidMoves.USE_BURNER_PHONE:
+                pass
+            
+            case ValidMoves.USE_EXPIRED_MEDICINE:
+                pass
+            
+            case ValidMoves.USE_INVERTER:
+                pass
+    
+    def remove_item(self, next_move, item: Items): # Hate how I can't type hint BuckshotRouletteMove for next_move here.
+        
+        # The below truth table shows why the conditional is why it is.
+        # 
+        #  is_players_turn | on_adrenaline | items getting removed |
+        # -----------------+---------------+-----------------------+
+        #                0 |             0 | dealer                |
+        #                0 |             1 | player                |
+        #                1 |             0 | player                |
+        #                1 |             1 | dealer                |
+        # -----------------+---------------+-----------------------+
+        
+        if self.is_players_turn != self.on_adrenaline:
+            next_move.player_items.remove(item)
+        else:
+            next_move.dealer_items.remove(item)
     
     def __str__(self):
         return f"""Buckshot Roulette Move
@@ -250,7 +269,7 @@ Number of blank shells: {self.blank_shells}
 
 Handcuffed? {"Yes" if self.handcuffed else "No"}
 Sawed gun? {"Yes" if self.gun_is_sawed else "No"}
-Current shell? {"Unknown" if self.current_shell == None else self.current_shell}
+Current shell? {"Unknown" if self.get_current_shell == None else self.get_current_shell}
 
 Player's Health: {self.player_health} / {self.max_health}
 Player's Items: {self.player_items}

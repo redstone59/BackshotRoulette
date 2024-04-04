@@ -38,16 +38,16 @@ def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
     match move:
         case ValidMoves.SHOOT_DEALER:
             if (not state.is_players_turn) and (state.gun_is_sawed or state.live_shells >= state.blank_shells): return True
-            if state.is_players_turn and state.current_shell() == "blank": return True
-            if (not state.is_players_turn) and state.current_shell() == "live": return True
+            if state.is_players_turn and state.get_current_shell() == "blank": return True
+            if (not state.is_players_turn) and state.get_current_shell() == "live": return True
         
         case ValidMoves.SHOOT_PLAYER:
             if state.is_players_turn and (state.gun_is_sawed or state.live_shells >= state.blank_shells): return True
-            if (not state.is_players_turn) and state.current_shell() == "blank": return True
-            if state.is_players_turn and state.current_shell() == "live": return True
+            if (not state.is_players_turn) and state.get_current_shell() == "blank": return True
+            if state.is_players_turn and state.get_current_shell() == "live": return True
 
         case ValidMoves.USE_BEER:
-            if state.current_shell() != None: return True
+            if state.get_current_shell() != None: return True
             if 0 in [state.live_shells, state.blank_shells]: return True
         
         case ValidMoves.USE_CIGARETTES:
@@ -65,7 +65,7 @@ def is_redundant_move(move: ValidMoves, state: BuckshotRouletteMove):
             if state.handcuffed > 0: return True
         
         case ValidMoves.USE_MAGNIFYING_GLASS:
-            if state.current_shell() != None: return True
+            if state.get_current_shell() != None: return True
             if state.live_shells == 0 or state.blank_shells == 0: return True
     
     return False
@@ -84,7 +84,7 @@ def obvious_move_exists(state: BuckshotRouletteMove):
     
     # Force shooting other player if the known shell is live and the other player has more than 1 health.
     other_players_health = state.dealer_health if state.is_players_turn else state.dealer_health
-    is_definitely_live = state.current_shell() == "live" or state.blank_shells == 0
+    is_definitely_live = state.get_current_shell() == "live" or state.blank_shells == 0
     can_use_hand_saw = not state.gun_is_sawed and Items.HAND_SAW in current_items
     
     if is_definitely_live:
@@ -94,14 +94,14 @@ def obvious_move_exists(state: BuckshotRouletteMove):
             return shoot_other_player
     
     # Force shooting self if the known shell is blank.
-    is_definitely_blank = state.current_shell() == "blank" or state.live_shells == 0
+    is_definitely_blank = state.get_current_shell() == "blank" or state.live_shells == 0
     
     if is_definitely_blank:
         return shoot_self
     
     # Force magnifying glass usage if the shell isn't known.
     has_magnifying_glass = Items.MAGNIFYING_GLASS in current_items
-    unknown_shell = state.current_shell() == None
+    unknown_shell = state.get_current_shell() == None
     one_of_each_shell = 0 not in [state.live_shells, state.blank_shells]
     
     if has_magnifying_glass and unknown_shell and one_of_each_shell:
@@ -166,7 +166,7 @@ def state_to_key(state: BuckshotRouletteMove):
     key <<= 2
     key += state.gun_is_sawed
     key <<= 1
-    match state.current_shell():
+    match state.get_current_shell():
         case None:
             key += 0b00
         case "live":
