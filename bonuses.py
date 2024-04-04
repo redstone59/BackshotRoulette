@@ -37,7 +37,7 @@ def item_bonus(items: list):
 def item_usage_bonus(move: ValidMoves, state: BuckshotRouletteMove):
     match move:
         case ValidMoves.USE_BEER:
-            if state.current_shell == None and state.live_shells < state.blank_shells: return 250
+            if state.current_shell() == None and state.live_shells < state.blank_shells: return 250
             return 0
         
         case ValidMoves.USE_CIGARETTES:
@@ -46,7 +46,7 @@ def item_usage_bonus(move: ValidMoves, state: BuckshotRouletteMove):
             return 150 * health_difference
         
         case ValidMoves.USE_HAND_SAW:
-            if state.current_shell == "live": return 250
+            if state.current_shell() == "live": return 250
             if state.live_shells >= state.blank_shells: return 100
         
         case ValidMoves.USE_HANDCUFFS:
@@ -61,17 +61,17 @@ def item_usage_bonus(move: ValidMoves, state: BuckshotRouletteMove):
 def known_shell_bonus(move: ValidMoves, state: BuckshotRouletteMove):
     bonus = 0
     
-    if state.current_shell == "live":
+    if state.current_shell() == "live":
         bonus += 200 * (1 if state.is_players_turn else -1)
         if state.is_players_turn and move != ValidMoves.SHOOT_DEALER: return -INF
         elif (not state.is_players_turn) and move != ValidMoves.SHOOT_PLAYER: return INF
     
-    elif state.current_shell == "blank":
+    elif state.current_shell() == "blank":
         bonus += 100 * (1 if state.is_players_turn else -1)
         if state.is_players_turn and move != ValidMoves.SHOOT_PLAYER: return -INF
         elif (not state.is_players_turn) and move != ValidMoves.SHOOT_DEALER: return INF
     
-    elif state.current_shell == None:
+    elif state.current_shell() == None:
         chance_live_loaded = Fraction(state.live_shells, state.live_shells + state.blank_shells)
         
         if state.is_players_turn and move == ValidMoves.SHOOT_DEALER: chance_live_loaded *= 100
@@ -97,7 +97,7 @@ def low_health_penalty(state: BuckshotRouletteMove):
 def shoot_other_person_bonus(move: ValidMoves, state: BuckshotRouletteMove):
     chance_live_loaded = Fraction(state.live_shells, state.live_shells + state.blank_shells)
     
-    if state.current_shell != None or chance_live_loaded < 0.5: return 0
+    if state.current_shell() != None or chance_live_loaded < 0.5: return 0
     
     if state.is_players_turn and move == ValidMoves.SHOOT_DEALER:
         return 100 * (state.live_shells - state.blank_shells)

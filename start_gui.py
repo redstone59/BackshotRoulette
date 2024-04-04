@@ -227,7 +227,10 @@ class GraphicBackshot: # ha ha ha ha ha
         position.handcuffed = handcuffed
         position.gun_is_sawed = bool(self.gun_is_sawed.get())
         
-        self.result_label["text"] = BackshotRoulette().search(18, position).gui_string()
+        try:
+            self.result_label["text"] = BackshotRoulette().search(18, position).gui_string()
+        except UnboundLocalError:
+            self.result_label["text"] = "Error when trying to evaluate,\ncheck bullet counts or health."
     
     def start(self):
         self.window.mainloop()
