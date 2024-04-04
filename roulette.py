@@ -78,12 +78,13 @@ class BuckshotRouletteMove:
         
         self.live_shells = live_shells
         self.blank_shells = blank_shells
+        self.loaded_shells = LoadedShells()
         
         self.is_players_turn = is_players_turn
         self.handcuffed = 0 # 0 represents no handcuffs, 1 means handcuffs are on but will go next turn, 2 means handcuffs are on and will skip next turn
         self.gun_is_sawed = False
-        self.loaded_shells = LoadedShells()
         self.on_adrenaline = False
+        self.inverter_on = False
         
         self.max_health = max_health
         self.dealer_health = dealer_health
@@ -120,11 +121,7 @@ class BuckshotRouletteMove:
         
         return all_moves
     
-    def move(self, move: ValidMoves):
-        if move not in self.get_all_moves(): 
-            error_message = f"Move {move} not possible in position\n---\n{self}\n---"
-            raise InvalidMoveError(error_message)
-        
+    def generate_live_and_blank_moves(self):
         next_move = deepcopy(self)
         
         if self.live_shells + self.blank_shells == 0:
@@ -143,6 +140,15 @@ class BuckshotRouletteMove:
         blank_move = deepcopy(self)
         blank_move.probabilty *= blank_probability
         blank_move.blank_shells = max(0, blank_move.blank_shells - 1)
+        
+        return next_move, live_move, blank_move
+    
+    def move(self, move: ValidMoves):
+        if move not in self.get_all_moves(): 
+            error_message = f"Move {move} not possible in position\n---\n{self}\n---"
+            raise InvalidMoveError(error_message)
+        
+        next_move, live_move, blank_move = self.generate_live_and_blank_moves()
         
         match move:
             case ValidMoves.SHOOT_DEALER:
@@ -182,6 +188,7 @@ class BuckshotRouletteMove:
                 return live_move, blank_move
                 
             case ValidMoves.USE_BEER:
+                # LoadedShells.shoot() just removes the first bullet. I should probably rename that.
                 live_move.loaded_shells.shoot()
                 blank_move.loaded_shells.shoot()
                 
@@ -230,19 +237,71 @@ class BuckshotRouletteMove:
                 return next_move,
 
             case ValidMoves.USE_ADRENALINE:
-                pass
+                if self.on_adrenaline: return None
+                
+                self.remove_item(next_move, Items.ADRENALINE)
+                
+                next_move.on_adrenaline = True
+                
+                return next_move,
             
             case ValidMoves.USE_BURNER_PHONE:
-                pass
+                total_shells = self.live_shells + self.blank_shells
+                possible_outcomes = []
+                
+                for i in range(0, total_shells):
+                    possible_live_move = deepcopy(self)
+                    possible_blank_move = deepcopy(self)
+                    
+                    shell_probability = Fraction(1, total_shells)
+                    
+                    possible_live_move.loaded_shells.set_shell(i, "live")
+                    possible_live_move.probabilty *= shell_probability
+                    possible_blank_move.loaded_shells.set_shell(i, "blank")
+                    possible_blank_move.probabilty *= shell_probability
+                    
+                    self.remove_item(possible_live_move, Items.BURNER_PHONE)
+                    self.remove_item(possible_blank_move, Items.BURNER_PHONE)
+                    
+                    possible_outcomes += [possible_live_move, possible_blank_move]
+                
+                return tuple(possible_outcomes)
             
             case ValidMoves.USE_EXPIRED_MEDICINE:
-                pass
+                heal_move = live_move
+                heal_move.probabilty = self.probabilty * Fraction(2, 5) # 40% change for 2 charges
+                if self.is_players_turn:
+                    heal_move.player_health += 2
+                    heal_move.player_health = max(self.max_health, heal_move.player_health)
+                else:
+                    heal_move.dealer_health += 2
+                    heal_move.dealer_health = max(self.max_health, heal_move.dealer_health)
+                
+                bad_move = blank_move
+                bad_move.probabilty = self.probabilty * Fraction(3, 5)
+                if self.is_players_turn:
+                    # bad thing here
+                    bad_move.player_health = min(0, bad_move.player_health)
+                else:
+                    # bad thing here
+                    bad_move.dealer_health = min(0, bad_move.dealer_health)
+                
+                self.remove_item(heal_move, Items.EXPIRED_MEDICINE)
+                self.remove_item(bad_move, Items.EXPIRED_MEDICINE)
+                
+                return heal_move, bad_move
             
             case ValidMoves.USE_INVERTER:
-                pass
+                # I don't even know what this does. I assume it's like this.
+                if self.inverter_on: return None
+
+                next_move.inverter_on = True
+                
+                self.remove_item(next_move, Items.INVERTER)
+                
+                return next_move,
     
     def remove_item(self, next_move, item: Items): # Hate how I can't type hint BuckshotRouletteMove for next_move here.
-        
         # The below truth table shows why the conditional is why it is.
         # 
         #  is_players_turn | on_adrenaline | items getting removed |
